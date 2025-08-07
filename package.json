@@ -5,7 +5,6 @@
   "main": "index.js",
   "scripts": {
     "dev": "vercel dev",
-    "build": "tsc",
     "start": "node dist/api/telegram.js"
   },
   "repository": {
