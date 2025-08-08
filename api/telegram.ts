@@ -447,7 +447,7 @@ bot.on("text", async (ctx) => {
   });
 
   const cacheIndicator = priceResult.cached ? " (cached)" : "";
-  const rateLimitInfo = `\n\n📊 Rate limit: ${rateLimit.remaining} checks remaining this minute`;
+  const rateLimitInfo = `\n📊 Rate limit: ${rateLimit.remaining} checks remaining this minute`;
 
   // Add market URL if available
   const marketLink = priceResult.marketUrl

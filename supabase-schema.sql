@@ -9,6 +9,8 @@ CREATE TABLE users (
   first_name VARCHAR(255),
   last_name VARCHAR(255),
   preferences JSONB DEFAULT '{"currency": "USD", "language": "en", "notifications": true}',
+  limits JSONB DEFAULT '{"max_alerts": 5, "price_checks_per_minute": 10, "tier": "free"}',
+  usage JSONB DEFAULT '{"alerts_created": 0, "price_checks_this_minute": 0}',
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -94,6 +96,16 @@ CREATE POLICY "Users can view own profile" ON users
 
 CREATE POLICY "Users can update own profile" ON users
   FOR UPDATE USING (auth.uid()::text = id::text);
+
+-- Public access policies for server-side usage without Supabase Auth
+CREATE POLICY "Public can view users" ON users
+  FOR SELECT USING (true);
+
+CREATE POLICY "Public can insert users" ON users
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public can update users" ON users
+  FOR UPDATE USING (true);
 
 -- Price alerts policies
 CREATE POLICY "Users can view own alerts" ON price_alerts

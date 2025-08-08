@@ -154,9 +154,7 @@ export async function getSteamPrice(
   const cachedPrice = await PriceService.getCachedPrice(itemName);
   if (cachedPrice) {
     // Generate official Steam market URL for cached result
-    const marketUrl = `https://steamcommunity.com/market/listings/${appId}/${encodeURIComponent(
-      itemName
-    )}`;
+    const marketUrl = `https://steamcommunity.com/market/listings/${appId}/${itemName}`;
 
     return {
       success: cachedPrice.success,
