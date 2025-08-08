@@ -451,7 +451,7 @@ bot.on("text", async (ctx) => {
 
   // Add market URL if available
   const marketLink = priceResult.marketUrl
-    ? `\n🔗 [View on Steam Market](${priceResult.marketUrl})`
+    ? `\n🔗 [View on Steam Market](${encodeURIComponent(priceResult.marketUrl)})`
     : "";
 
   await ctx.reply(
