@@ -1,4 +1,6 @@
 import { Telegraf } from "telegraf";
+import { message } from "telegraf/filters";
+import { join, link } from "telegraf/format";
 import {
   DEFAULT_TIER,
   TIER_DISPLAY_NAMES,
@@ -273,7 +275,7 @@ function parseAlertInput(
 }
 
 // Handle text messages
-bot.on("text", async (ctx) => {
+bot.on(message("text"), async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
@@ -454,14 +456,20 @@ bot.on("text", async (ctx) => {
   //   ? `\n [View on Steam Market](${encodeURIComponent(priceResult.marketUrl)})`
   //   : "";
 
+  // await ctx.reply(
+  //   `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n` +
+  //     `🔗 [View on Steam Market](${priceResult.marketUrl})\n\n` +
+  //     `💡 Tip: Reply to this message with:\n` +
+  //     `• "50" for $50 target\n` +
+  //     `• "-10%" for 10% drop alert\n` +
+  //     `• "+20%" for 20% increase alert`,
+  // );
   await ctx.reply(
-    `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n` +
-      '🔗 [View on Steam Market](' + priceResult.marketUrl + ')\n\n' +
-      `💡 Tip: Reply to this message with:\n` +
-      `• "50" for $50 target\n` +
-      `• "-10%" for 10% drop alert\n` +
-      `• "+20%" for 20% increase alert`,
-    { parse_mode: "MarkdownV2" }
+    join([
+      `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n`,
+      link("🔗 View on Steam Market", priceResult.marketUrl || ""),
+      "\n\n💡 Tip: Reply to this message with:\n• \"50\" for $50 target\n• \"-10%\" for 10% drop alert\n• \"+20%\" for 20% increase alert",
+    ])
   );
 });
 
