@@ -4,7 +4,7 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- Users table
 CREATE TABLE users (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
-  telegram_id BIGINT UNIQUE NOT NULL,
+  telegram_id TEXT UNIQUE NOT NULL,
   username VARCHAR(255),
   first_name VARCHAR(255),
   last_name VARCHAR(255),
@@ -99,20 +99,20 @@ CREATE POLICY "Users can update own profile" ON users
 CREATE POLICY "Users can view own alerts" ON price_alerts
   FOR SELECT USING (
     user_id IN (
-      SELECT id FROM users WHERE telegram_id = auth.uid()
+      SELECT id FROM users WHERE telegram_id = auth.uid()::text
     )
   );
 
 CREATE POLICY "Users can insert own alerts" ON price_alerts
   FOR INSERT WITH CHECK (
     user_id IN (
-      SELECT id FROM users WHERE telegram_id = auth.uid()
+      SELECT id FROM users WHERE telegram_id = auth.uid()::text
     )
   );
 
 CREATE POLICY "Users can update own alerts" ON price_alerts
   FOR UPDATE USING (
     user_id IN (
-      SELECT id FROM users WHERE telegram_id = auth.uid()
+      SELECT id FROM users WHERE telegram_id = auth.uid()::text
     )
   );

@@ -6,13 +6,16 @@ const bot = new Telegraf(process.env.BOT_TOKEN!);
 
 // Cron job handler for checking price alerts
 export default async function handler(req: any, res: any) {
-  if (req.method !== "POST") {
+  if (req.method !== "GET") {
     return res.status(405).json({ error: "Method not allowed" });
   }
 
-  // Verify cron secret (optional security)
-  const cronSecret = req.headers["x-cron-secret"];
-  if (process.env.CRON_SECRET && cronSecret !== process.env.CRON_SECRET) {
+  // Verify cron secret using Authorization: Bearer <CRON_SECRET>
+  if (!process.env.CRON_SECRET) {
+    return res.status(500).json({ error: "CRON_SECRET not configured" });
+  }
+  const authHeader = req.headers["authorization"] as string | undefined;
+  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
     return res.status(401).json({ error: "Unauthorized" });
   }
 
@@ -113,6 +116,9 @@ export default async function handler(req: any, res: any) {
       } catch (error) {
         console.error(`Error processing alert ${alert.id}:`, error);
         errors++;
+      } finally {
+        // Throttle: wait 1 second after each alert to avoid rate limits
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
 

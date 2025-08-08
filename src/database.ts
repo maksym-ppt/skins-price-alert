@@ -10,7 +10,7 @@ export const supabase = createClient(supabaseUrl, supabaseKey);
 // User interface
 export interface User {
   id: string;
-  telegram_id: number;
+  telegram_id: string;
   username?: string;
   first_name?: string;
   last_name?: string;
@@ -77,7 +77,7 @@ export interface PriceHistory {
 export class UserService {
   // Auto-register user when they start the bot
   static async registerUser(
-    telegramId: number,
+    telegramId: string | number,
     userData: {
       username?: string;
       first_name?: string;
@@ -85,11 +85,12 @@ export class UserService {
     }
   ): Promise<User | null> {
     try {
+      const telegramIdText = String(telegramId);
       // Check if user already exists
       const { data: existingUser } = await supabase
         .from("users")
         .select("*")
-        .eq("telegram_id", telegramId)
+        .eq("telegram_id", telegramIdText)
         .single();
 
       if (existingUser) {
@@ -102,7 +103,7 @@ export class UserService {
             last_name: userData.last_name,
             updated_at: new Date().toISOString(),
           })
-          .eq("telegram_id", telegramId)
+          .eq("telegram_id", telegramIdText)
           .select()
           .single();
 
@@ -113,7 +114,7 @@ export class UserService {
       const { data: newUser, error } = await supabase
         .from("users")
         .insert({
-          telegram_id: telegramId,
+          telegram_id: telegramIdText,
           username: userData.username,
           first_name: userData.first_name,
           last_name: userData.last_name,
@@ -150,12 +151,13 @@ export class UserService {
   }
 
   // Get user by Telegram ID
-  static async getUser(telegramId: number): Promise<User | null> {
+  static async getUser(telegramId: string | number): Promise<User | null> {
     try {
+      const telegramIdText = String(telegramId);
       const { data: user, error } = await supabase
         .from("users")
         .select("*")
-        .eq("telegram_id", telegramId)
+        .eq("telegram_id", telegramIdText)
         .single();
 
       if (error) {
@@ -172,7 +174,7 @@ export class UserService {
 
   // Check if user can make a price check (rate limiting)
   static async canMakePriceCheck(
-    telegramId: number
+    telegramId: string | number
   ): Promise<{ allowed: boolean; remaining: number; resetTime?: string }> {
     try {
       const user = await this.getUser(telegramId);
@@ -216,7 +218,9 @@ export class UserService {
   }
 
   // Increment price check counter
-  static async incrementPriceCheck(telegramId: number): Promise<boolean> {
+  static async incrementPriceCheck(
+    telegramId: string | number
+  ): Promise<boolean> {
     try {
       const user = await this.getUser(telegramId);
       if (!user) return false;
@@ -239,7 +243,7 @@ export class UserService {
             last_price_check: now.toISOString(),
           },
         })
-        .eq("telegram_id", telegramId);
+        .eq("telegram_id", String(telegramId));
 
       return !error;
     } catch (error) {
@@ -249,7 +253,9 @@ export class UserService {
   }
 
   // Reset price check counter
-  static async resetPriceCheckCounter(telegramId: number): Promise<boolean> {
+  static async resetPriceCheckCounter(
+    telegramId: string | number
+  ): Promise<boolean> {
     try {
       const { error } = await supabase
         .from("users")
@@ -259,7 +265,7 @@ export class UserService {
             last_price_check: new Date().toISOString(),
           },
         })
-        .eq("telegram_id", telegramId);
+        .eq("telegram_id", String(telegramId));
 
       return !error;
     } catch (error) {
@@ -270,7 +276,7 @@ export class UserService {
 
   // Check if user can create more alerts
   static async canCreateAlert(
-    telegramId: number
+    telegramId: string | number
   ): Promise<{ allowed: boolean; current: number; limit: number }> {
     try {
       const user = await this.getUser(telegramId);

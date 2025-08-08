@@ -19,5 +19,11 @@
       "src": "/api/cron",
       "dest": "/api/cron.ts"
     }
+  ],
+  "crons": [
+    {
+      "path": "/api/cron",
+      "schedule": "0 0 * * *"
+    }
   ]
 }
