@@ -4,12 +4,20 @@
     {
       "src": "api/telegram.ts",
       "use": "@vercel/node"
+    },
+    {
+      "src": "api/cron.ts",
+      "use": "@vercel/node"
     }
   ],
   "routes": [
     {
       "src": "/api/telegram",
       "dest": "/api/telegram.ts"
+    },
+    {
+      "src": "/api/cron",
+      "dest": "/api/cron.ts"
     }
   ]
 }
