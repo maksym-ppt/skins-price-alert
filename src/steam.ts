@@ -144,6 +144,58 @@ function parseVolumeString(volumeStr: string): number {
   return parseInt(volumeStr.replace(/[^\d]/g, "")) || 0;
 }
 
+// --- Randomized request fingerprints for Steam requests ---
+const USER_AGENTS: string[] = [
+  // Desktop Chrome variants
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:127.0) Gecko/20100101 Firefox/127.0",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+  "Mozilla/5.0 (Macintosh; Intel Mac OS X 13_5) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Safari/605.1.15",
+  "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+  // Mobile variants
+  "Mozilla/5.0 (iPhone; CPU iPhone OS 17_4 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.4 Mobile/15E148 Safari/604.1",
+  "Mozilla/5.0 (Linux; Android 14; Pixel 7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/125.0.0.0 Mobile Safari/537.36",
+];
+
+const ACCEPT_LANGUAGE_CANDIDATES: string[] = [
+  "en-US,en;q=0.9",
+  "en-GB,en;q=0.9",
+  "de-DE,de;q=0.9,en;q=0.8",
+  "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+  "es-ES,es;q=0.9,en;q=0.8",
+  "fr-FR,fr;q=0.9,en;q=0.8",
+  "pt-BR,pt;q=0.9,en;q=0.8",
+];
+
+function pickRandom<T>(items: T[]): T {
+  return items[Math.floor(Math.random() * items.length)];
+}
+
+function buildRandomHeaders(
+  itemName: string,
+  appId: number
+): Record<string, string> {
+  const encodedItem = encodeURIComponent(itemName);
+  const refererChoices = [
+    `https://steamcommunity.com/market/listings/${appId}/${encodedItem}`,
+    `https://steamcommunity.com/market/search?appid=${appId}`,
+  ];
+
+  return {
+    "User-Agent": pickRandom(USER_AGENTS),
+    Accept: pickRandom([
+      "application/json, text/javascript, */*; q=0.01",
+      "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8",
+    ]),
+    "Accept-Language": pickRandom(ACCEPT_LANGUAGE_CANDIDATES),
+    Referer: pickRandom(refererChoices),
+    "X-Requested-With": Math.random() < 0.7 ? "XMLHttpRequest" : "",
+    Connection: "keep-alive",
+    "Cache-Control": Math.random() < 0.5 ? "no-cache" : "max-age=0",
+    Pragma: "no-cache",
+  };
+}
+
 export async function getSteamPrice(
   itemName: string,
   options: SteamPriceOptions = {}
@@ -185,11 +237,8 @@ export async function getSteamPrice(
       "https://steamcommunity.com/market/priceoverview/",
       {
         params,
-        timeout: 5000,
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
-        },
+        timeout: 4500 + Math.floor(Math.random() * 2500),
+        headers: buildRandomHeaders(itemName, appId),
       }
     );
 
