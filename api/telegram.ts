@@ -227,8 +227,14 @@ bot.command("alerts", async (ctx) => {
 bot.action("ALERT_DROP", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const priceMessage: any = (ctx.callbackQuery as any)?.message as any;
-    const itemName: string | undefined = priceMessage?.reply_to_message?.text;
+    const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
+    // Try to infer item from the original user message this price message replied to
+    const itemName: string | undefined = cbMessage?.reply_to_message?.text;
+    // Fallback: try to extract quoted name from message text if present
+    const selfText: string | undefined = cbMessage?.text;
+    const quotedMatch =
+      typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
+    const resolvedItem = itemName || (quotedMatch ? quotedMatch[1] : undefined);
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -237,7 +243,7 @@ bot.action("ALERT_DROP", async (ctx) => {
     }
 
     await ctx.reply(
-      `🔔 Drop alert: Reply with percentage (e.g. 10) for ${itemName}`,
+      `🔔 Drop alert: Reply with percentage (e.g. 10) for ${resolvedItem}`,
       { reply_markup: Markup.forceReply().reply_markup }
     );
   } catch (err) {
@@ -248,8 +254,12 @@ bot.action("ALERT_DROP", async (ctx) => {
 bot.action("ALERT_INCREASE", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const priceMessage: any = (ctx.callbackQuery as any)?.message as any;
-    const itemName: string | undefined = priceMessage?.reply_to_message?.text;
+    const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
+    const itemName: string | undefined = cbMessage?.reply_to_message?.text;
+    const selfText: string | undefined = cbMessage?.text;
+    const quotedMatch =
+      typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
+    const resolvedItem = itemName || (quotedMatch ? quotedMatch[1] : undefined);
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -258,7 +268,7 @@ bot.action("ALERT_INCREASE", async (ctx) => {
     }
 
     await ctx.reply(
-      `🔔 Increase alert: Reply with percentage (e.g. 10) for ${itemName}`,
+      `🔔 Increase alert: Reply with percentage (e.g. 10) for ${resolvedItem}`,
       { reply_markup: Markup.forceReply().reply_markup }
     );
   } catch (err) {
@@ -269,8 +279,12 @@ bot.action("ALERT_INCREASE", async (ctx) => {
 bot.action("ALERT_TARGET", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const priceMessage: any = (ctx.callbackQuery as any)?.message as any;
-    const itemName: string | undefined = priceMessage?.reply_to_message?.text;
+    const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
+    const itemName: string | undefined = cbMessage?.reply_to_message?.text;
+    const selfText: string | undefined = cbMessage?.text;
+    const quotedMatch =
+      typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
+    const resolvedItem = itemName || (quotedMatch ? quotedMatch[1] : undefined);
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -286,7 +300,7 @@ bot.action("ALERT_TARGET", async (ctx) => {
     } catch (_) {}
 
     await ctx.reply(
-      `🎯 Target alert: Reply with target price (e.g. 50) in ${currencyCode} for ${itemName}`,
+      `🎯 Target alert: Reply with target price (e.g. 50) in ${currencyCode} for ${resolvedItem}`,
       { reply_markup: Markup.forceReply().reply_markup }
     );
   } catch (err) {
@@ -682,19 +696,21 @@ bot.on(message("text"), async (ctx) => {
   await ctx.reply(
     join([
       `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n`,
-      // Only include the link if we actually have a URL
       ...(priceResult.marketUrl
         ? [link("🔗 View on Steam Market", priceResult.marketUrl)]
         : []),
-      '\n\n💡 Tip: Reply to this message with:\n• "50" for $50 target\n• "-10%" for 10% drop alert\n• "+20%" for 20% increase alert',
+      '\n\n💡 Tip: Tap a button below, then reply with a number:\n• Drop: 10 → -10%\n• Increase: 20 → +20%\n• Target: 50 → $50\nOr reply to this message with "50", "-10%", or "+20%".',
     ]),
-    Markup.inlineKeyboard([
-      [
-        Markup.button.callback("📉 Drop alert", "ALERT_DROP"),
-        Markup.button.callback("📈 Increase alert", "ALERT_INCREASE"),
-        Markup.button.callback("🎯 Target alert", "ALERT_TARGET"),
-      ],
-    ])
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback("📉 Drop alert", "ALERT_DROP"),
+          Markup.button.callback("📈 Increase alert", "ALERT_INCREASE"),
+          Markup.button.callback("🎯 Target alert", "ALERT_TARGET"),
+        ],
+      ]).reply_markup,
+      reply_parameters: { message_id: ctx.message.message_id },
+    }
   );
 });
 
