@@ -217,8 +217,8 @@ export async function getSteamPrice(
       message: cachedPrice.success
         ? `Current lowest price for "${itemName}": ${
             CURRENCY_SYMBOLS[currency] || "$"
-          }${cachedPrice.price} (cached)`
-        : `No price found for "${itemName}". (cached)`,
+          }${cachedPrice.price}`
+        : `No price found for "${itemName}".`,
       cached: true,
       marketUrl: cachedPrice.success ? marketUrl : undefined,
     };

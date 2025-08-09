@@ -4,8 +4,18 @@ import { DEFAULT_TIER, TIER_LIMITS } from "./constants";
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
+
+// Admin client for server-side operations (bypass RLS)
+export const adminSupabase = createClient(
+  supabaseUrl,
+  serviceRoleKey || supabaseKey,
+  {
+    auth: { persistSession: false },
+  }
+);
 
 // User interface
 export interface User {
@@ -344,7 +354,7 @@ export class AlertService {
     basePrice?: number
   ): Promise<PriceAlert | null> {
     try {
-      const { data: alert, error } = await supabase
+      const { data: alert, error } = await adminSupabase
         .from("price_alerts")
         .insert({
           user_id: userId,
@@ -364,14 +374,14 @@ export class AlertService {
       }
 
       // Increment user's alert count
-      const user = await supabase
+      const user = await adminSupabase
         .from("users")
         .select("usage")
         .eq("id", userId)
         .single();
 
       if (user.data) {
-        await supabase
+        await adminSupabase
           .from("users")
           .update({
             usage: {
@@ -392,7 +402,7 @@ export class AlertService {
   // Get user's active alerts
   static async getUserAlerts(userId: string): Promise<PriceAlert[]> {
     try {
-      const { data: alerts, error } = await supabase
+      const { data: alerts, error } = await adminSupabase
         .from("price_alerts")
         .select("*")
         .eq("user_id", userId)
@@ -414,7 +424,7 @@ export class AlertService {
   // Deactivate an alert
   static async deactivateAlert(alertId: string): Promise<boolean> {
     try {
-      const { error } = await supabase
+      const { error } = await adminSupabase
         .from("price_alerts")
         .update({ is_active: false })
         .eq("id", alertId);
