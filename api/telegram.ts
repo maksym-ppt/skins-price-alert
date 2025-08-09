@@ -223,13 +223,12 @@ bot.command("alerts", async (ctx) => {
   }
 });
 
-// Inline button actions for creating alerts quickly (carry item name in callback data)
-bot.action(/^ALERT_DROP:(.+)$/i, async (ctx) => {
+// Inline button actions for creating alerts quickly (get item from replied message)
+bot.action("ALERT_DROP", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const data = (ctx.callbackQuery as any)?.data as string;
-    const encodedItem = data.split(":")[1] || "";
-    const itemName = decodeURIComponent(encodedItem);
+    const priceMessage: any = (ctx.callbackQuery as any)?.message as any;
+    const itemName: string | undefined = priceMessage?.reply_to_message?.text;
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -246,12 +245,11 @@ bot.action(/^ALERT_DROP:(.+)$/i, async (ctx) => {
   }
 });
 
-bot.action(/^ALERT_INCREASE:(.+)$/i, async (ctx) => {
+bot.action("ALERT_INCREASE", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const data = (ctx.callbackQuery as any)?.data as string;
-    const encodedItem = data.split(":")[1] || "";
-    const itemName = decodeURIComponent(encodedItem);
+    const priceMessage: any = (ctx.callbackQuery as any)?.message as any;
+    const itemName: string | undefined = priceMessage?.reply_to_message?.text;
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -268,12 +266,11 @@ bot.action(/^ALERT_INCREASE:(.+)$/i, async (ctx) => {
   }
 });
 
-bot.action(/^ALERT_TARGET:(.+)$/i, async (ctx) => {
+bot.action("ALERT_TARGET", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const data = (ctx.callbackQuery as any)?.data as string;
-    const encodedItem = data.split(":")[1] || "";
-    const itemName = decodeURIComponent(encodedItem);
+    const priceMessage: any = (ctx.callbackQuery as any)?.message as any;
+    const itemName: string | undefined = priceMessage?.reply_to_message?.text;
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -693,18 +690,9 @@ bot.on(message("text"), async (ctx) => {
     ]),
     Markup.inlineKeyboard([
       [
-        Markup.button.callback(
-          "📉 Drop alert",
-          `ALERT_DROP:${encodeURIComponent(message)}`
-        ),
-        Markup.button.callback(
-          "📈 Increase alert",
-          `ALERT_INCREASE:${encodeURIComponent(message)}`
-        ),
-        Markup.button.callback(
-          "🎯 Target alert",
-          `ALERT_TARGET:${encodeURIComponent(message)}`
-        ),
+        Markup.button.callback("📉 Drop alert", "ALERT_DROP"),
+        Markup.button.callback("📈 Increase alert", "ALERT_INCREASE"),
+        Markup.button.callback("🎯 Target alert", "ALERT_TARGET"),
       ],
     ])
   );
