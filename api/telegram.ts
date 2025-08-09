@@ -1,4 +1,4 @@
-import { Telegraf } from "telegraf";
+import { Markup, Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import { join, link } from "telegraf/format";
 import {
@@ -223,6 +223,80 @@ bot.command("alerts", async (ctx) => {
   }
 });
 
+// Inline button actions for creating alerts quickly (carry item name in callback data)
+bot.action(/^ALERT_DROP:(.+)$/i, async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+    const data = (ctx.callbackQuery as any)?.data as string;
+    const encodedItem = data.split(":")[1] || "";
+    const itemName = decodeURIComponent(encodedItem);
+    if (!itemName) {
+      await ctx.reply(
+        "❗ Please send an item name first, then use the buttons under the result."
+      );
+      return;
+    }
+
+    await ctx.reply(
+      `🔔 Drop alert: Reply with percentage (e.g. 10) for ${itemName}`,
+      { reply_markup: Markup.forceReply().reply_markup }
+    );
+  } catch (err) {
+    console.error("Error handling ALERT_DROP:", err);
+  }
+});
+
+bot.action(/^ALERT_INCREASE:(.+)$/i, async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+    const data = (ctx.callbackQuery as any)?.data as string;
+    const encodedItem = data.split(":")[1] || "";
+    const itemName = decodeURIComponent(encodedItem);
+    if (!itemName) {
+      await ctx.reply(
+        "❗ Please send an item name first, then use the buttons under the result."
+      );
+      return;
+    }
+
+    await ctx.reply(
+      `🔔 Increase alert: Reply with percentage (e.g. 10) for ${itemName}`,
+      { reply_markup: Markup.forceReply().reply_markup }
+    );
+  } catch (err) {
+    console.error("Error handling ALERT_INCREASE:", err);
+  }
+});
+
+bot.action(/^ALERT_TARGET:(.+)$/i, async (ctx) => {
+  try {
+    await ctx.answerCbQuery();
+    const data = (ctx.callbackQuery as any)?.data as string;
+    const encodedItem = data.split(":")[1] || "";
+    const itemName = decodeURIComponent(encodedItem);
+    if (!itemName) {
+      await ctx.reply(
+        "❗ Please send an item name first, then use the buttons under the result."
+      );
+      return;
+    }
+
+    const from = ctx.from;
+    let currencyCode = "USD";
+    try {
+      const dbUser = from ? await UserService.getUser(from.id) : null;
+      currencyCode = dbUser?.preferences?.currency || "USD";
+    } catch (_) {}
+
+    await ctx.reply(
+      `🎯 Target alert: Reply with target price (e.g. 50) in ${currencyCode} for ${itemName}`,
+      { reply_markup: Markup.forceReply().reply_markup }
+    );
+  } catch (err) {
+    console.error("Error handling ALERT_TARGET:", err);
+  }
+});
+
 // Helper function to parse alert input
 function parseAlertInput(
   input: string,
@@ -281,9 +355,124 @@ bot.on(message("text"), async (ctx) => {
 
   const message = ctx.message.text.trim();
 
-  // Check if this is a reply to a price check (for creating alerts)
+  // Check if this is a reply to a prompt or a price check (for creating alerts)
   if (ctx.message.reply_to_message && "text" in ctx.message.reply_to_message) {
-    const originalMessage = ctx.message.reply_to_message.text;
+    const repliedText = ctx.message.reply_to_message.text;
+
+    // Handle ForceReply prompts created by inline buttons
+    const promptMatch = repliedText.match(
+      /^🔔 (Drop|Increase) alert: .* for (.+)$|^🎯 Target alert: .* for (.+)$/s
+    );
+
+    if (promptMatch) {
+      const isDropOrIncrease = !!promptMatch[1];
+      const typeLabel = promptMatch[1];
+      const itemName = (promptMatch[2] || promptMatch[3] || "").trim();
+
+      if (!itemName) {
+        await ctx.reply(
+          "❌ Could not detect item name. Please send the item name again."
+        );
+        return;
+      }
+
+      // Get current price for calculations
+      const priceResult = await getSteamPrice(itemName, {
+        appId: Apps.CS2,
+        currency: Currency.USD,
+      });
+
+      if (!priceResult.success || !priceResult.price) {
+        await ctx.reply(
+          "❌ Could not get current price for this item. Please try again."
+        );
+        return;
+      }
+
+      const currentPrice = priceResult.price;
+
+      // Interpret numeric-only input according to prompt type
+      const numericOnly = ctx.message.text.trim();
+      const numericValue = parseFloat(numericOnly.replace(/[^\d.]/g, ""));
+      if (isNaN(numericValue) || numericValue <= 0) {
+        await ctx.reply("❌ Please enter a valid number.");
+        return;
+      }
+
+      let normalizedInput = numericOnly;
+      if (isDropOrIncrease) {
+        if (typeLabel === "Drop") normalizedInput = `-${numericValue}%`;
+        else if (typeLabel === "Increase")
+          normalizedInput = `+${numericValue}%`;
+      } else {
+        // Target alert path -> absolute price
+        normalizedInput = `${numericValue}`;
+      }
+
+      const alertConfig = parseAlertInput(normalizedInput, currentPrice);
+      if (!alertConfig) {
+        await ctx.reply(
+          `❌ Invalid alert format! Please send just a number like 10 or 50.`
+        );
+        return;
+      }
+
+      const dbUser = await UserService.getUser(user.id);
+      if (!dbUser) {
+        await ctx.reply("❌ User not found. Please use /start to register.");
+        return;
+      }
+
+      // Check alert limits
+      const alertCheck = await UserService.canCreateAlert(user.id);
+      if (!alertCheck.allowed) {
+        await ctx.reply(
+          `❌ Alert limit reached!\n\nYou have ${alertCheck.current}/${alertCheck.limit} alerts.\nUpgrade to premium for more alerts.`
+        );
+        return;
+      }
+
+      const alert = await AlertService.createAlert(
+        dbUser.id,
+        itemName,
+        alertConfig.targetPrice,
+        alertConfig.alertType,
+        alertConfig.percentageThreshold,
+        alertConfig.basePrice
+      );
+
+      if (alert) {
+        let alertMessage = `✅ Price alert created!\n\n`;
+        alertMessage += `Item: ${itemName}\n`;
+
+        if (alertConfig.alertType === "absolute") {
+          alertMessage += `Type: Absolute price\n`;
+          alertMessage += `Target: $${alertConfig.targetPrice}\n`;
+        } else if (alertConfig.alertType === "percentage_drop") {
+          alertMessage += `Type: Percentage drop\n`;
+          alertMessage += `Threshold: -${alertConfig.percentageThreshold}%\n`;
+          alertMessage += `Base price: $${alertConfig.basePrice}\n`;
+          alertMessage += `Target: $${alertConfig.targetPrice.toFixed(2)}\n`;
+        } else if (alertConfig.alertType === "percentage_increase") {
+          alertMessage += `Type: Percentage increase\n`;
+          alertMessage += `Threshold: +${alertConfig.percentageThreshold}%\n`;
+          alertMessage += `Base price: $${alertConfig.basePrice}\n`;
+          alertMessage += `Target: $${alertConfig.targetPrice.toFixed(2)}\n`;
+        }
+
+        alertMessage += `\n📊 Alerts: ${alertCheck.current + 1}/${
+          alertCheck.limit
+        }`;
+
+        await ctx.reply(alertMessage);
+      } else {
+        await ctx.reply("❌ Failed to create alert. Please try again.");
+      }
+      return;
+    }
+
+    // Fallback: user replied directly to the price message with an alert value
+    const originalMessage = repliedText;
 
     // Get current price from the original message
     const priceResult = await getSteamPrice(originalMessage, {
@@ -373,6 +562,35 @@ bot.on(message("text"), async (ctx) => {
   if (message.toLowerCase().startsWith("remove ")) {
     // Handle alert removal (simplified for now)
     await ctx.reply("🗑️ Alert removal feature coming soon!");
+    return;
+  }
+
+  // Simple helpers for extra commands typed as text
+  if (
+    ["drop alert", "increase alert", "target alert"].includes(
+      message.toLowerCase()
+    )
+  ) {
+    await ctx.reply(
+      "Send an item name to check its price, then use the buttons under the result to create an alert."
+    );
+    return;
+  }
+
+  // If it looks like an alert input but isn't a reply, guide the user
+  const looksLikePercent = /^([+-]?)(\d+(?:\.\d+)?)%$/.test(message);
+  const numericValue = parseFloat(message);
+  const looksLikeAbsolute = !isNaN(numericValue) && numericValue > 0;
+  if (
+    (looksLikePercent || looksLikeAbsolute) &&
+    !ctx.message.reply_to_message
+  ) {
+    await ctx.reply(
+      "💡 To create a price alert, first send an item name to check its price, then reply to that message with your alert like:\n" +
+        '• "50" for $50 target\n' +
+        '• "-10%" for 10% drop alert\n' +
+        '• "+20%" for 20% increase alert'
+    );
     return;
   }
 
@@ -467,8 +685,27 @@ bot.on(message("text"), async (ctx) => {
   await ctx.reply(
     join([
       `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n`,
-      link("🔗 View on Steam Market", priceResult.marketUrl || ""),
-      "\n\n💡 Tip: Reply to this message with:\n• \"50\" for $50 target\n• \"-10%\" for 10% drop alert\n• \"+20%\" for 20% increase alert",
+      // Only include the link if we actually have a URL
+      ...(priceResult.marketUrl
+        ? [link("🔗 View on Steam Market", priceResult.marketUrl)]
+        : []),
+      '\n\n💡 Tip: Reply to this message with:\n• "50" for $50 target\n• "-10%" for 10% drop alert\n• "+20%" for 20% increase alert',
+    ]),
+    Markup.inlineKeyboard([
+      [
+        Markup.button.callback(
+          "📉 Drop alert",
+          `ALERT_DROP:${encodeURIComponent(message)}`
+        ),
+        Markup.button.callback(
+          "📈 Increase alert",
+          `ALERT_INCREASE:${encodeURIComponent(message)}`
+        ),
+        Markup.button.callback(
+          "🎯 Target alert",
+          `ALERT_TARGET:${encodeURIComponent(message)}`
+        ),
+      ],
     ])
   );
 });
