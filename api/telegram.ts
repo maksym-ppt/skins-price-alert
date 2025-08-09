@@ -452,17 +452,25 @@ bot.on(message("text"), async (ctx) => {
   const rateLimitInfo = `\n📊 Rate limit: ${rateLimit.remaining} checks remaining this minute`;
 
   // Add market URL if available
-  const marketLink = priceResult.marketUrl
-    ? "\n🔗 [View on Steam Market](" + priceResult.marketUrl + ")\n"
-    : "";
+  // const marketLink = priceResult.marketUrl
+  //   ? `\n [View on Steam Market](${encodeURIComponent(priceResult.marketUrl)})`
+  //   : "";
 
   await ctx.reply(
-    `${priceResult.message}${cacheIndicator}${rateLimitInfo}${marketLink}\n` +
+    `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n` +
+      `🔗 [View on Steam Market](${priceResult.marketUrl || ""})\n\n` +
       `💡 Tip: Reply to this message with:\n` +
       `• "50" for $50 target\n` +
       `• "-10%" for 10% drop alert\n` +
       `• "+20%" for 20% increase alert`,
   );
+  // await ctx.reply(
+  //   join([
+  //     `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n`,
+  //     link("🔗 View on Steam Market", priceResult.marketUrl || ""),
+  //     "\n\n💡 Tip: Reply to this message with:\n• \"50\" for $50 target\n• \"-10%\" for 10% drop alert\n• \"+20%\" for 20% increase alert",
+  //   ])
+  // );
 });
 
 // --- Serverless handler for Vercel ---
