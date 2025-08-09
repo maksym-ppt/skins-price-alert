@@ -458,7 +458,7 @@ bot.on(message("text"), async (ctx) => {
 
   await ctx.reply(
     `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n` +
-      "🔗 [View on Steam Market](" + priceResult.marketUrl || "" +")\n\n" +
+      '🔗 [View on Steam Market](' + priceResult.marketUrl || '' + ')\n\n' +
       `💡 Tip: Reply to this message with:\n` +
       `• "50" for $50 target\n` +
       `• "-10%" for 10% drop alert\n` +
