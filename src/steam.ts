@@ -281,12 +281,12 @@ export async function getSteamPrice(
         currency: currency.toString(),
         currencySymbol,
         game: gameName,
-        volume: success ? volume : undefined,
-        medianPrice: success ? medianPrice : undefined,
+        volume: volume || undefined,
+        medianPrice: medianPrice || undefined,
         message:
           message || `No price data available for "${itemName}" (${gameName}).`,
         cached: false,
-        marketUrl: success ? marketUrl : undefined,
+        marketUrl,
       };
     } else {
       const gameName = GAME_NAMES[appId] || "CS2";
