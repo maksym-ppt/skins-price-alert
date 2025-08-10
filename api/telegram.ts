@@ -341,7 +341,10 @@ bot.command("search", async (ctx) => {
   for (let i = 0; i < weaponTypes.length; i += 2) {
     const row = [];
     row.push(
-      Markup.button.callback(weaponTypes[i], `search_type_${weaponTypes[i]}`)
+      Markup.button.callback(
+        weaponTypes[i],
+        `search_type_${encodeURIComponent(weaponTypes[i])}`
+      )
     );
 
     // Add second button to the row if available
@@ -349,7 +352,7 @@ bot.command("search", async (ctx) => {
       row.push(
         Markup.button.callback(
           weaponTypes[i + 1],
-          `search_type_${weaponTypes[i + 1]}`
+          `search_type_${encodeURIComponent(weaponTypes[i + 1])}`
         )
       );
     }
@@ -361,26 +364,25 @@ bot.command("search", async (ctx) => {
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.reply(
-    `🔍 Step-by-Step Item Search\n\n` +
-      `Step 1: Choose item type\n\n`,
-      // `Available types:\n` +
-      // weaponTypes
-      //   .map((type, index) => {
-      //     const isEven = index % 2 === 0;
-      //     const isLast = index === weaponTypes.length - 1;
-      //     const nextType = weaponTypes[index + 1];
+    `🔍 Step-by-Step Item Search\n\n` + `Step 1: Choose item type\n\n`,
+    // `Available types:\n` +
+    // weaponTypes
+    //   .map((type, index) => {
+    //     const isEven = index % 2 === 0;
+    //     const isLast = index === weaponTypes.length - 1;
+    //     const nextType = weaponTypes[index + 1];
 
-      //     if (isEven && nextType) {
-      //       return `• ${type.padEnd(15)} • ${nextType}`;
-      //     } else if (isEven && isLast) {
-      //       return `• ${type}`;
-      //     } else if (!isEven) {
-      //       return ""; // Skip odd indices as they're handled above
-      //     }
-      //     return `• ${type}`;
-      //   })
-      //   .filter((line) => line !== "")
-      //   .join("\n"),
+    //     if (isEven && nextType) {
+    //       return `• ${type.padEnd(15)} • ${nextType}`;
+    //     } else if (isEven && isLast) {
+    //       return `• ${type}`;
+    //     } else if (!isEven) {
+    //       return ""; // Skip odd indices as they're handled above
+    //     }
+    //     return `• ${type}`;
+    //   })
+    //   .filter((line) => line !== "")
+    //   .join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -392,7 +394,7 @@ bot.action(/^search_type_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const weaponType = ctx.match[1];
+  const weaponType = decodeURIComponent(ctx.match[1]);
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -419,21 +421,23 @@ bot.action(/^search_type_(.+)$/, async (ctx) => {
   // Create keyboard for weapon names (limit to 20 to avoid Telegram limits)
   const keyboard = weaponNames
     .slice(0, 20)
-    .map((name) => [Markup.button.callback(name, `search_weapon_${name}`)]);
+    .map((name) => [
+      Markup.button.callback(name, `search_weapon_${encodeURIComponent(name)}`),
+    ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 2: Choose item name\n\n` +
       `Type: ${weaponType}\n`,
-      // `Available weapons:\n` +
-      // weaponNames
-      //   .slice(0, 20)
-      //   .map((name) => `• ${name}`)
-      //   .join("\n") +
-      // (weaponNames.length > 20
-      //   ? `\n... and ${weaponNames.length - 20} more`
-      //   : ""),
+    // `Available weapons:\n` +
+    // weaponNames
+    //   .slice(0, 20)
+    //   .map((name) => `• ${name}`)
+    //   .join("\n") +
+    // (weaponNames.length > 20
+    //   ? `\n... and ${weaponNames.length - 20} more`
+    //   : ""),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -445,7 +449,7 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const weaponName = ctx.match[1];
+  const weaponName = decodeURIComponent(ctx.match[1]);
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -491,7 +495,9 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
   // Create keyboard for skin names
   const keyboard = skinNames
     // .slice(0, 20)
-    .map((skin) => [Markup.button.callback(skin, `search_skin_${skin}`)]);
+    .map((skin) => [
+      Markup.button.callback(skin, `search_skin_${encodeURIComponent(skin)}`),
+    ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
@@ -499,12 +505,12 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
       `Step 3: Choose skin name\n\n` +
       `Type: ${session.weaponType}\n` +
       `Name: ${weaponName}\n`,
-      // `Available skins:\n` +
-      // skinNames
-      //   .slice(0, 20)
-      //   .map((skin) => `• ${skin}`)
-      //   .join("\n") +
-      // (skinNames.length > 20 ? `\n... and ${skinNames.length - 20} more` : ""),
+    // `Available skins:\n` +
+    // skinNames
+    //   .slice(0, 20)
+    //   .map((skin) => `• ${skin}`)
+    //   .join("\n") +
+    // (skinNames.length > 20 ? `\n... and ${skinNames.length - 20} more` : ""),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -516,7 +522,7 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const skinName = ctx.match[1];
+  const skinName = decodeURIComponent(ctx.match[1]);
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -534,7 +540,10 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
 
   // Create keyboard for skin conditions
   const keyboard = SKIN_CONDITIONS.map((condition) => [
-    Markup.button.callback(condition, `search_condition_${condition}`),
+    Markup.button.callback(
+      condition,
+      `search_condition_${encodeURIComponent(condition)}`
+    ),
   ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
@@ -545,7 +554,7 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
       `Name: ${session.weaponName}\n` +
       `Skin: ${skinName}\n` +
       `Available conditions:\n`,
-      // SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
+    // SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -557,7 +566,7 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const condition = ctx.match[1] as any;
+  const condition = decodeURIComponent(ctx.match[1]) as any;
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -578,7 +587,10 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
 
   // Create keyboard for categories
   const keyboard = categories.map((category) => [
-    Markup.button.callback(category, `search_category_${category}`),
+    Markup.button.callback(
+      category,
+      `search_category_${encodeURIComponent(category)}`
+    ),
   ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
@@ -590,7 +602,7 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
       `Skin: ${session.skinName}\n` +
       `Condition: ${condition}\n` +
       `Available categories:\n`,
-      // categories.map((category) => `• ${category}`).join("\n"),
+    // categories.map((category) => `• ${category}`).join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -602,7 +614,7 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const category = ctx.match[1];
+  const category = decodeURIComponent(ctx.match[1]);
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -707,7 +719,10 @@ async function handleNoSkins(ctx: any, weaponType: string, weaponName: string) {
 
   // Create keyboard for skin conditions
   const keyboard = SKIN_CONDITIONS.map((condition) => [
-    Markup.button.callback(condition, `search_condition_${condition}`),
+    Markup.button.callback(
+      condition,
+      `search_condition_${encodeURIComponent(condition)}`
+    ),
   ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
@@ -807,7 +822,10 @@ bot.action("search_restart", async (ctx) => {
   for (let i = 0; i < weaponTypes.length; i += 2) {
     const row = [];
     row.push(
-      Markup.button.callback(weaponTypes[i], `search_type_${weaponTypes[i]}`)
+      Markup.button.callback(
+        weaponTypes[i],
+        `search_type_${encodeURIComponent(weaponTypes[i])}`
+      )
     );
 
     // Add second button to the row if available
@@ -815,7 +833,7 @@ bot.action("search_restart", async (ctx) => {
       row.push(
         Markup.button.callback(
           weaponTypes[i + 1],
-          `search_type_${weaponTypes[i + 1]}`
+          `search_type_${encodeURIComponent(weaponTypes[i + 1])}`
         )
       );
     }
