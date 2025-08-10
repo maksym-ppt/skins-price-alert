@@ -298,13 +298,33 @@ export class SearchService {
   /**
    * Validate if generated item name exists in database
    */
-  static async validateItemName(itemName: string): Promise<boolean> {
+  static async validateItemName(
+    weaponType: string,
+    weaponName: string,
+    skinName: string | null,
+    condition: SkinCondition,
+    category: string
+  ): Promise<boolean> {
     try {
-      const { data, error } = await adminSupabase
+      // Search by weapon_name and skin_name instead of full name
+      let query = adminSupabase
         .from("items")
         .select("name")
-        .eq("name", itemName)
-        .single();
+        .eq("weapon_name", weaponName);
+
+      // Handle vanilla knives (no skin)
+      if (
+        weaponType.toLowerCase() === "knife" &&
+        (!skinName || skinName.toLowerCase() === "vanilla")
+      ) {
+        // For vanilla knives, search for items with null or empty skin_name
+        query = query.or("skin_name.is.null,skin_name.eq.");
+      } else {
+        // For items with skins, search by skin_name
+        query = query.eq("skin_name", skinName);
+      }
+
+      const { data, error } = await query.single();
 
       if (error) {
         return false;
@@ -319,14 +339,22 @@ export class SearchService {
   /**
    * Get similar item names for suggestions
    */
-  static async getSimilarItems(itemName: string): Promise<string[]> {
+  static async getSimilarItems(
+    weaponName: string,
+    skinName?: string | null
+  ): Promise<string[]> {
     try {
-      const { data, error } = await adminSupabase
+      let query = adminSupabase
         .from("items")
         .select("name")
-        .or(`name.ilike.%${itemName}%,weapon_name.ilike.%${itemName}%`)
-        .order("name")
-        .limit(5);
+        .or(`weapon_name.ilike.%${weaponName}%`);
+
+      // If skin name is provided, also search by skin name
+      if (skinName && skinName.toLowerCase() !== "vanilla") {
+        query = query.or(`skin_name.ilike.%${skinName}%`);
+      }
+
+      const { data, error } = await query.order("name").limit(5);
 
       if (error) {
         console.error("Error getting similar items:", error);

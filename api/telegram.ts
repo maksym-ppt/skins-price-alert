@@ -592,11 +592,20 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
   });
 
   // Check if item exists in database
-  const exists = await SearchService.validateItemName(finalName);
+  const exists = await SearchService.validateItemName(
+    session.weaponType!,
+    session.weaponName!,
+    session.skinName || null,
+    session.condition!,
+    category
+  );
 
   if (!exists) {
     // Get similar items for suggestions
-    const similarItems = await SearchService.getSimilarItems(finalName);
+    const similarItems = await SearchService.getSimilarItems(
+      session.weaponName!,
+      session.skinName || null
+    );
 
     let message =
       `❌ Item not found in database\n\n` + `Generated name: ${finalName}\n\n`;

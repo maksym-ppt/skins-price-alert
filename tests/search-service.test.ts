@@ -215,6 +215,8 @@ describe("SearchService", () => {
       eq: jest.fn().mockReturnThis(),
       not: jest.fn().mockReturnThis(),
       order: jest.fn().mockReturnThis(),
+      or: jest.fn().mockReturnThis(),
+      limit: jest.fn().mockReturnThis(),
     };
 
     beforeEach(() => {
