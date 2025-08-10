@@ -339,8 +339,8 @@ bot.command("search", async (ctx) => {
   // Create inline keyboard for weapon types
   const keyboard = [];
 
-  // Group weapon types into rows of 2 buttons each
-  for (let i = 0; i < weaponTypes.length; i += 2) {
+  // Group weapon types into rows of 3 buttons each
+  for (let i = 0; i < weaponTypes.length; i += 3) {
     const row = [];
     row.push(
       Markup.button.callback(
@@ -355,6 +355,16 @@ bot.command("search", async (ctx) => {
         Markup.button.callback(
           weaponTypes[i + 1],
           `search_type_${encodeURIComponent(weaponTypes[i + 1])}`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < weaponTypes.length) {
+      row.push(
+        Markup.button.callback(
+          weaponTypes[i + 2],
+          `search_type_${encodeURIComponent(weaponTypes[i + 2])}`
         )
       );
     }
@@ -421,11 +431,41 @@ bot.action(/^search_type_(.+)$/, async (ctx) => {
   }
 
   // Create keyboard for weapon names (limit to 20 to avoid Telegram limits)
-  const keyboard = weaponNames
-    .slice(0, 20)
-    .map((name) => [
-      Markup.button.callback(name, `search_weapon_${encodeURIComponent(name)}`),
-    ]);
+  const keyboard = [];
+
+  // Group weapon names into rows of 3 buttons each
+  for (let i = 0; i < Math.min(weaponNames.length, 20); i += 3) {
+    const row = [];
+    row.push(
+      Markup.button.callback(
+        weaponNames[i],
+        `search_weapon_${encodeURIComponent(weaponNames[i])}`
+      )
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < Math.min(weaponNames.length, 20)) {
+      row.push(
+        Markup.button.callback(
+          weaponNames[i + 1],
+          `search_weapon_${encodeURIComponent(weaponNames[i + 1])}`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < Math.min(weaponNames.length, 20)) {
+      row.push(
+        Markup.button.callback(
+          weaponNames[i + 2],
+          `search_weapon_${encodeURIComponent(weaponNames[i + 2])}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
@@ -495,11 +535,41 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
   }
 
   // Create keyboard for skin names
-  const keyboard = skinNames
-    // .slice(0, 20)
-    .map((skin) => [
-      Markup.button.callback(skin, `search_skin_${encodeURIComponent(skin)}`),
-    ]);
+  const keyboard = [];
+
+  // Group skin names into rows of 3 buttons each
+  for (let i = 0; i < skinNames.length; i += 3) {
+    const row = [];
+    row.push(
+      Markup.button.callback(
+        skinNames[i],
+        `search_skin_${encodeURIComponent(skinNames[i])}`
+      )
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < skinNames.length) {
+      row.push(
+        Markup.button.callback(
+          skinNames[i + 1],
+          `search_skin_${encodeURIComponent(skinNames[i + 1])}`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < skinNames.length) {
+      row.push(
+        Markup.button.callback(
+          skinNames[i + 2],
+          `search_skin_${encodeURIComponent(skinNames[i + 2])}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
@@ -541,12 +611,41 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
   });
 
   // Create keyboard for skin conditions
-  const keyboard = SKIN_CONDITIONS.map((condition) => [
-    Markup.button.callback(
-      condition,
-      `search_condition_${encodeURIComponent(condition)}`
-    ),
-  ]);
+  const keyboard = [];
+
+  // Group skin conditions into rows of 3 buttons each
+  for (let i = 0; i < SKIN_CONDITIONS.length; i += 3) {
+    const row = [];
+    row.push(
+      Markup.button.callback(
+        SKIN_CONDITIONS[i],
+        `search_condition_${encodeURIComponent(SKIN_CONDITIONS[i])}`
+      )
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < SKIN_CONDITIONS.length) {
+      row.push(
+        Markup.button.callback(
+          SKIN_CONDITIONS[i + 1],
+          `search_condition_${encodeURIComponent(SKIN_CONDITIONS[i + 1])}`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < SKIN_CONDITIONS.length) {
+      row.push(
+        Markup.button.callback(
+          SKIN_CONDITIONS[i + 2],
+          `search_condition_${encodeURIComponent(SKIN_CONDITIONS[i + 2])}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
@@ -588,12 +687,47 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
   const categories = SearchService.getAvailableCategories(session.weaponType!);
 
   // Create keyboard for categories
-  const keyboard = categories.map((category) => [
-    Markup.button.callback(
-      category,
-      `search_category_${CATEGORY_IDS[category as keyof typeof CATEGORY_IDS]}`
-    ),
-  ]);
+  const keyboard = [];
+
+  // Group categories into rows of 3 buttons each
+  for (let i = 0; i < categories.length; i += 3) {
+    const row = [];
+    row.push(
+      Markup.button.callback(
+        categories[i],
+        `search_category_${
+          CATEGORY_IDS[categories[i] as keyof typeof CATEGORY_IDS]
+        }`
+      )
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < categories.length) {
+      row.push(
+        Markup.button.callback(
+          categories[i + 1],
+          `search_category_${
+            CATEGORY_IDS[categories[i + 1] as keyof typeof CATEGORY_IDS]
+          }`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < categories.length) {
+      row.push(
+        Markup.button.callback(
+          categories[i + 2],
+          `search_category_${
+            CATEGORY_IDS[categories[i + 2] as keyof typeof CATEGORY_IDS]
+          }`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
@@ -717,12 +851,41 @@ async function handleNoSkins(ctx: any, weaponType: string, weaponName: string) {
   });
 
   // Create keyboard for skin conditions
-  const keyboard = SKIN_CONDITIONS.map((condition) => [
-    Markup.button.callback(
-      condition,
-      `search_condition_${encodeURIComponent(condition)}`
-    ),
-  ]);
+  const keyboard = [];
+
+  // Group skin conditions into rows of 3 buttons each
+  for (let i = 0; i < SKIN_CONDITIONS.length; i += 3) {
+    const row = [];
+    row.push(
+      Markup.button.callback(
+        SKIN_CONDITIONS[i],
+        `search_condition_${encodeURIComponent(SKIN_CONDITIONS[i])}`
+      )
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < SKIN_CONDITIONS.length) {
+      row.push(
+        Markup.button.callback(
+          SKIN_CONDITIONS[i + 1],
+          `search_condition_${encodeURIComponent(SKIN_CONDITIONS[i + 1])}`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < SKIN_CONDITIONS.length) {
+      row.push(
+        Markup.button.callback(
+          SKIN_CONDITIONS[i + 2],
+          `search_condition_${encodeURIComponent(SKIN_CONDITIONS[i + 2])}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
@@ -825,8 +988,8 @@ bot.action("search_restart", async (ctx) => {
   // Create inline keyboard for weapon types
   const keyboard = [];
 
-  // Group weapon types into rows of 2 buttons each
-  for (let i = 0; i < weaponTypes.length; i += 2) {
+  // Group weapon types into rows of 3 buttons each
+  for (let i = 0; i < weaponTypes.length; i += 3) {
     const row = [];
     row.push(
       Markup.button.callback(
@@ -845,6 +1008,16 @@ bot.action("search_restart", async (ctx) => {
       );
     }
 
+    // Add third button to the row if available
+    if (i + 2 < weaponTypes.length) {
+      row.push(
+        Markup.button.callback(
+          weaponTypes[i + 2],
+          `search_type_${encodeURIComponent(weaponTypes[i + 2])}`
+        )
+      );
+    }
+
     keyboard.push(row);
   }
 
@@ -853,25 +1026,30 @@ bot.action("search_restart", async (ctx) => {
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
-      `Step 1: Choose weapon type\n\n` +
-      `Available types:\n` +
-      weaponTypes
-        .map((type, index) => {
-          const isEven = index % 2 === 0;
-          const isLast = index === weaponTypes.length - 1;
-          const nextType = weaponTypes[index + 1];
+      `Step 1: Choose weapon type\n\n`,
+      // `Available types:\n` +
+      // weaponTypes
+      //   .map((type, index) => {
+      //     const isEven = index % 3 === 0;
+      //     const isLast = index === weaponTypes.length - 1;
+      //     const nextType = weaponTypes[index + 1];
+      //     const nextType2 = weaponTypes[index + 2];
 
-          if (isEven && nextType) {
-            return `• ${type.padEnd(15)} • ${nextType}`;
-          } else if (isEven && isLast) {
-            return `• ${type}`;
-          } else if (!isEven) {
-            return ""; // Skip odd indices as they're handled above
-          }
-          return `• ${type}`;
-        })
-        .filter((line) => line !== "")
-        .join("\n"),
+      //     if (isEven && nextType && nextType2) {
+      //       return `• ${type.padEnd(15)} • ${nextType.padEnd(
+      //         15
+      //       )} • ${nextType2}`;
+      //     } else if (isEven && nextType) {
+      //       return `• ${type.padEnd(15)} • ${nextType}`;
+      //     } else if (isEven && isLast) {
+      //       return `• ${type}`;
+      //     } else if (!isEven) {
+      //       return ""; // Skip non-first indices as they're handled above
+      //     }
+      //     return `• ${type}`;
+      //   })
+      //   .filter((line) => line !== "")
+      //   .join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
