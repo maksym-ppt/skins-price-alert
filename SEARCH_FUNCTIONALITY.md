@@ -17,8 +17,16 @@ The step-by-step search guides users through a 5-step process to find items:
 
 #### Step 1: Choose Weapon Type
 
-- **Available types**: Rifle, Pistol, Sniper Rifle, SMG, Shotgun, Machinegun, Knife, Gloves
-- **UI**: Inline keyboard with weapon type buttons
+- **Available types**:
+  - Sniper Rifle
+  - Pistol
+  - Machinegun
+  - SMG
+  - Shotgun
+  - Equipment
+  - Knife
+  - Gloves
+- **UI**: Inline keyboard with weapon type buttons (2 per row)
 - **Action**: User selects weapon type
 
 #### Step 2: Choose Weapon Name
@@ -218,27 +226,31 @@ After finding an item through search:
 ```
 User: /search
 Bot: Step 1: Choose weapon type
-     [Rifle] [Pistol] [Knife] [Gloves] [Cancel]
+     [Sniper Rifle] [Pistol]
+     [Machinegun]   [SMG]
+     [Shotgun]      [Equipment]
+     [Knife]        [Gloves]
+     [Cancel]
 
-User: [Knife]
+User: [Sniper Rifle]
 Bot: Step 2: Choose weapon name
-     [Bayonet] [Butterfly Knife] [Karambit] [Cancel]
+     [AWP] [SSG 08] [SCAR-20] [Cancel]
 
-User: [Bayonet]
+User: [AWP]
 Bot: Step 3: Choose skin name
-     [Vanilla] [Bright Water] [Crimson Web] [Cancel]
+     [Dragon Lore] [Asiimov] [Fade] [Cancel]
 
-User: [Vanilla]
+User: [Dragon Lore]
 Bot: Step 4: Choose skin condition
      [Factory New] [Minimal Wear] [Field-Tested] [Cancel]
 
 User: [Field-Tested]
 Bot: Step 5: Choose category
-     [Normal ★] [★ StatTrak™] [Cancel]
+     [Normal] [StatTrak™] [Souvenir] [Cancel]
 
-User: [Normal ★]
+User: [Normal]
 Bot: ✅ Item found!
-     Generated name: ★ Bayonet
+     Generated name: AWP | Dragon Lore (Field-Tested)
      [Check Price] [Search Another] [Cancel]
 ```
 

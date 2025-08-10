@@ -334,16 +334,52 @@ bot.command("search", async (ctx) => {
   SearchService.createSearchSession(user.id.toString());
 
   // Create inline keyboard for weapon types
-  const keyboard = weaponTypes.map((type) => [
-    Markup.button.callback(type, `search_type_${type}`),
-  ]);
+  const keyboard = [];
+
+  // Group weapon types into rows of 2 buttons each
+  for (let i = 0; i < weaponTypes.length; i += 2) {
+    const row = [];
+    row.push(
+      Markup.button.callback(weaponTypes[i], `search_type_${weaponTypes[i]}`)
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < weaponTypes.length) {
+      row.push(
+        Markup.button.callback(
+          weaponTypes[i + 1],
+          `search_type_${weaponTypes[i + 1]}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
+  // Add cancel button in the last row
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.reply(
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 1: Choose weapon type\n\n` +
       `Available types:\n` +
-      weaponTypes.map((type) => `• ${type}`).join("\n"),
+      weaponTypes
+        .map((type, index) => {
+          const isEven = index % 2 === 0;
+          const isLast = index === weaponTypes.length - 1;
+          const nextType = weaponTypes[index + 1];
+
+          if (isEven && nextType) {
+            return `• ${type.padEnd(15)} • ${nextType}`;
+          } else if (isEven && isLast) {
+            return `• ${type}`;
+          } else if (!isEven) {
+            return ""; // Skip odd indices as they're handled above
+          }
+          return `• ${type}`;
+        })
+        .filter((line) => line !== "")
+        .join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -764,16 +800,52 @@ bot.action("search_restart", async (ctx) => {
   SearchService.createSearchSession(user.id.toString());
 
   // Create inline keyboard for weapon types
-  const keyboard = weaponTypes.map((type) => [
-    Markup.button.callback(type, `search_type_${type}`),
-  ]);
+  const keyboard = [];
+
+  // Group weapon types into rows of 2 buttons each
+  for (let i = 0; i < weaponTypes.length; i += 2) {
+    const row = [];
+    row.push(
+      Markup.button.callback(weaponTypes[i], `search_type_${weaponTypes[i]}`)
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < weaponTypes.length) {
+      row.push(
+        Markup.button.callback(
+          weaponTypes[i + 1],
+          `search_type_${weaponTypes[i + 1]}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
+  // Add cancel button in the last row
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 1: Choose weapon type\n\n` +
       `Available types:\n` +
-      weaponTypes.map((type) => `• ${type}`).join("\n"),
+      weaponTypes
+        .map((type, index) => {
+          const isEven = index % 2 === 0;
+          const isLast = index === weaponTypes.length - 1;
+          const nextType = weaponTypes[index + 1];
+
+          if (isEven && nextType) {
+            return `• ${type.padEnd(15)} • ${nextType}`;
+          } else if (isEven && isLast) {
+            return `• ${type}`;
+          } else if (!isEven) {
+            return ""; // Skip odd indices as they're handled above
+          }
+          return `• ${type}`;
+        })
+        .filter((line) => line !== "")
+        .join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
