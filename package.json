@@ -9,6 +9,7 @@
     "import-csv": "tsx scripts/import-csv.ts",
     "test-import": "tsx scripts/test-import.ts",
     "check-env": "tsx scripts/check-env.ts",
+    "check-weapons": "tsx scripts/check-weapon-types.ts",
     "test": "jest",
     "test:watch": "jest --watch",
     "build": "tsc"

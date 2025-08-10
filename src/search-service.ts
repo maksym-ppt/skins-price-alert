@@ -1,27 +1,11 @@
 import { config } from "dotenv";
+import { ITEM_CATEGORIES, SKIN_CONDITIONS, WEAPON_TYPES } from "./constants";
 import { adminSupabase } from "./database";
 
 // Load environment variables
 config();
 
-// Skin conditions for CS2 items
-export const SKIN_CONDITIONS = [
-  "Factory New",
-  "Minimal Wear",
-  "Field-Tested",
-  "Well-Worn",
-  "Battle-Scarred",
-] as const;
-
 export type SkinCondition = (typeof SKIN_CONDITIONS)[number];
-
-// Item categories
-export const ITEM_CATEGORIES = {
-  WEAPON: ["Normal", "StatTrak™", "Souvenir"],
-  KNIFE: ["Normal ★", "★ StatTrak™"],
-  GLOVES: ["Normal ★"],
-} as const;
-
 export type WeaponCategory = (typeof ITEM_CATEGORIES.WEAPON)[number];
 export type KnifeCategory = (typeof ITEM_CATEGORIES.KNIFE)[number];
 export type GloveCategory = (typeof ITEM_CATEGORIES.GLOVES)[number];
@@ -50,29 +34,10 @@ const searchSessions = new Map<string, SearchSession>();
 
 export class SearchService {
   /**
-   * Get all weapon types from the database
+   * Get all weapon types from predefined constants
    */
   static async getWeaponTypes(): Promise<string[]> {
-    try {
-      const { data, error } = await adminSupabase
-        .from("items")
-        .select("weapon_type")
-        .order("weapon_type");
-
-      if (error) {
-        console.error("Error getting weapon types:", error);
-        return [];
-      }
-
-      // Get unique weapon types
-      const uniqueTypes = [
-        ...new Set(data?.map((item) => item.weapon_type) || []),
-      ];
-      return uniqueTypes.sort();
-    } catch (error) {
-      console.error("Error in getWeaponTypes:", error);
-      return [];
-    }
+    return [...WEAPON_TYPES];
   }
 
   /**

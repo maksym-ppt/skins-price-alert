@@ -3,11 +3,12 @@ import { message } from "telegraf/filters";
 import { join, link } from "telegraf/format";
 import {
   DEFAULT_TIER,
+  SKIN_CONDITIONS,
   TIER_DISPLAY_NAMES,
   TIER_LIMITS,
 } from "../src/constants";
 import { AlertService, UserService } from "../src/database";
-import { SearchService, SKIN_CONDITIONS } from "../src/search-service";
+import { SearchService } from "../src/search-service";
 import {
   Apps,
   Currency,
@@ -1237,19 +1238,6 @@ bot.on(message("text"), async (ctx) => {
   const cacheIndicator = priceResult.cached ? " (cached)" : "";
   const rateLimitInfo = `\n📊 Rate limit: ${rateLimit.remaining} checks remaining this minute`;
 
-  // Add market URL if available
-  // const marketLink = priceResult.marketUrl
-  //   ? `\n [View on Steam Market](${encodeURIComponent(priceResult.marketUrl)})`
-  //   : "";
-
-  // await ctx.reply(
-  //   `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n` +
-  //     `🔗 [View on Steam Market](` + priceResult.marketUrl + `)\n\n` +
-  //     `💡 Tip: Reply to this message with:\n` +
-  //     `• "50" for $50 target\n` +
-  //     `• "-10%" for 10% drop alert\n` +
-  //     `• "+20%" for 20% increase alert`,
-  // );
   await ctx.reply(
     join([
       `${priceResult.message}${cacheIndicator}${rateLimitInfo}\n`,

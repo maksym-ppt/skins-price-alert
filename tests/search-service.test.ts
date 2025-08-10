@@ -1,8 +1,5 @@
-import {
-  ITEM_CATEGORIES,
-  SearchService,
-  SKIN_CONDITIONS,
-} from "../src/search-service";
+import { ITEM_CATEGORIES, SKIN_CONDITIONS } from "../src/constants";
+import { SearchService } from "../src/search-service";
 
 describe("SearchService", () => {
   describe("generateItemName", () => {

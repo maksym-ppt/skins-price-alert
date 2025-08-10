@@ -18,3 +18,40 @@ export const TIER_DISPLAY_NAMES: Record<SubscriptionTier, string> = {
   premium: "Premium",
   pro: "Pro",
 };
+
+// Predefined weapon types for CS2 items
+export const WEAPON_TYPES = [
+  "Equipment",
+  "Gloves",
+  "Knife",
+  "Machinegun",
+  "Pistol",
+  "Rifle",
+  "Shotgun",
+  "SMG",
+  "Sniper Rifle",
+] as const;
+
+export type WeaponType = (typeof WEAPON_TYPES)[number];
+
+// Skin conditions for CS2 items
+export const SKIN_CONDITIONS = [
+  "Factory New",
+  "Minimal Wear",
+  "Field-Tested",
+  "Well-Worn",
+  "Battle-Scarred",
+] as const;
+
+export type SkinCondition = (typeof SKIN_CONDITIONS)[number];
+
+// Item categories
+export const ITEM_CATEGORIES = {
+  WEAPON: ["Normal", "StatTrak™", "Souvenir"],
+  KNIFE: ["Normal ★", "★ StatTrak™"],
+  GLOVES: ["Normal ★"],
+} as const;
+
+export type WeaponCategory = (typeof ITEM_CATEGORIES.WEAPON)[number];
+export type KnifeCategory = (typeof ITEM_CATEGORIES.KNIFE)[number];
+export type GloveCategory = (typeof ITEM_CATEGORIES.GLOVES)[number];

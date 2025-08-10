@@ -2,6 +2,7 @@ import { parse } from "csv-parse/sync";
 import { config } from "dotenv";
 import { readFileSync } from "fs";
 import { join } from "path";
+import { WEAPON_TYPES, WeaponType } from "./constants";
 import { adminSupabase } from "./database";
 
 // Load environment variables from .env file
@@ -24,7 +25,7 @@ interface CSVItem {
 interface ProcessedItem {
   name: string;
   weapon_name: string;
-  weapon_type: string;
+  weapon_type: WeaponType;
   skin_name: string | null;
   rarity: string;
   rarity_definition: string | null;
@@ -73,7 +74,7 @@ export class CSVImporter {
       return {
         name: csvItem.Name.trim(),
         weapon_name: csvItem["Weapon Name"].trim(),
-        weapon_type: csvItem["Weapon Type"].trim(),
+        weapon_type: csvItem["Weapon Type"].trim() as WeaponType,
         skin_name: csvItem["Skin Name"]?.trim() || null,
         rarity: csvItem.Rarity?.trim() || "Unknown",
         rarity_definition: csvItem.Definition?.trim() || null,
@@ -357,6 +358,12 @@ export class CSVImporter {
       const byType: Record<string, number> = {};
       const byRarity: Record<string, number> = {};
 
+      // Initialize all predefined weapon types with 0 count
+      WEAPON_TYPES.forEach((weaponType) => {
+        byType[weaponType] = 0;
+      });
+
+      // Count actual occurrences
       typeStats?.forEach((item) => {
         byType[item.weapon_type] = (byType[item.weapon_type] || 0) + 1;
       });

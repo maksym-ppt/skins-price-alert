@@ -1,6 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 import { config } from "dotenv";
-import { DEFAULT_TIER, TIER_LIMITS } from "./constants";
+import {
+  DEFAULT_TIER,
+  TIER_LIMITS,
+  WEAPON_TYPES,
+  WeaponType,
+} from "./constants";
 
 // Load environment variables from .env file
 config();
@@ -65,7 +70,7 @@ export interface CS2Item {
   id: string;
   name: string;
   weapon_name: string;
-  weapon_type: string;
+  weapon_type: WeaponType;
   skin_name?: string;
   rarity: string;
   rarity_definition?: string;
@@ -502,6 +507,12 @@ export class ItemService {
       const byType: Record<string, number> = {};
       const byRarity: Record<string, number> = {};
 
+      // Initialize all predefined weapon types with 0 count
+      WEAPON_TYPES.forEach((weaponType) => {
+        byType[weaponType] = 0;
+      });
+
+      // Count actual occurrences
       typeStats?.forEach((item) => {
         byType[item.weapon_type] = (byType[item.weapon_type] || 0) + 1;
       });

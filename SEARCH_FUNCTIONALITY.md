@@ -18,14 +18,12 @@ The step-by-step search guides users through a 5-step process to find items:
 #### Step 1: Choose Weapon Type
 
 - **Available types**:
-  - Sniper Rifle
-  - Pistol
-  - Machinegun
-  - SMG
-  - Shotgun
   - Equipment
-  - Knife
   - Gloves
+  - Knife
+  - Machinegun
+  - Pistol
+  - Rifle
 - **UI**: Inline keyboard with weapon type buttons (2 per row)
 - **Action**: User selects weapon type
 
@@ -226,21 +224,20 @@ After finding an item through search:
 ```
 User: /search
 Bot: Step 1: Choose weapon type
-     [Sniper Rifle] [Pistol]
-     [Machinegun]   [SMG]
-     [Shotgun]      [Equipment]
-     [Knife]        [Gloves]
+     [Equipment] [Gloves]
+     [Knife]     [Machinegun]
+     [Pistol]    [Rifle]
      [Cancel]
 
-User: [Sniper Rifle]
+User: [Rifle]
 Bot: Step 2: Choose weapon name
-     [AWP] [SSG 08] [SCAR-20] [Cancel]
+     [AK-47] [M4A4] [AWP] [Cancel]
 
-User: [AWP]
+User: [AK-47]
 Bot: Step 3: Choose skin name
-     [Dragon Lore] [Asiimov] [Fade] [Cancel]
+     [Redline] [Vulcan] [Fire Serpent] [Cancel]
 
-User: [Dragon Lore]
+User: [Redline]
 Bot: Step 4: Choose skin condition
      [Factory New] [Minimal Wear] [Field-Tested] [Cancel]
 
@@ -250,7 +247,7 @@ Bot: Step 5: Choose category
 
 User: [Normal]
 Bot: ✅ Item found!
-     Generated name: AWP | Dragon Lore (Field-Tested)
+     Generated name: AK-47 | Redline (Field-Tested)
      [Check Price] [Search Another] [Cancel]
 ```
 
