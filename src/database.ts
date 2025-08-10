@@ -1,10 +1,27 @@
 import { createClient } from "@supabase/supabase-js";
+import { config } from "dotenv";
 import { DEFAULT_TIER, TIER_LIMITS } from "./constants";
+
+// Load environment variables from .env file
+config();
 
 // Initialize Supabase client
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+// Validate required environment variables
+if (!supabaseUrl) {
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_URL is required in environment variables"
+  );
+}
+
+if (!supabaseKey) {
+  throw new Error(
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY is required in environment variables"
+  );
+}
 
 export const supabase = createClient(supabaseUrl, supabaseKey);
 
@@ -43,11 +60,28 @@ export interface User {
   };
 }
 
+// CS2 Item interface
+export interface CS2Item {
+  id: string;
+  name: string;
+  weapon_name: string;
+  weapon_type: string;
+  skin_name?: string;
+  rarity: string;
+  rarity_definition?: string;
+  rarity_color?: string;
+  collection?: string;
+  introduced_date?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 // Price alert interface
 export interface PriceAlert {
   id: string;
   user_id: string;
   item_name: string;
+  item_id?: string;
   target_price: number;
   current_price?: number;
   is_active: boolean;
@@ -62,6 +96,7 @@ export interface PriceAlert {
 export interface PriceCache {
   id: string;
   item_name: string;
+  item_id?: string;
   price: number;
   currency: string;
   volume?: number;
@@ -75,6 +110,7 @@ export interface PriceCache {
 export interface PriceHistory {
   id: string;
   item_name: string;
+  item_id?: string;
   price: number;
   currency: string;
   volume?: number;
@@ -339,6 +375,157 @@ export class UserService {
   }
 }
 
+// CS2 Item management functions
+export class ItemService {
+  // Search items by query
+  static async searchItems(
+    query: string,
+    limit: number = 20
+  ): Promise<CS2Item[]> {
+    try {
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .or(
+          `name.ilike.%${query}%,weapon_name.ilike.%${query}%,skin_name.ilike.%${query}%`
+        )
+        .order("name")
+        .limit(limit);
+
+      if (error) {
+        console.error("Search error:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error searching items:", error);
+      return [];
+    }
+  }
+
+  // Get items by weapon type
+  static async getItemsByType(
+    weaponType: string,
+    limit: number = 50
+  ): Promise<CS2Item[]> {
+    try {
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .eq("weapon_type", weaponType)
+        .order("name")
+        .limit(limit);
+
+      if (error) {
+        console.error("Error getting items by type:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error getting items by type:", error);
+      return [];
+    }
+  }
+
+  // Get items by rarity
+  static async getItemsByRarity(
+    rarity: string,
+    limit: number = 50
+  ): Promise<CS2Item[]> {
+    try {
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .eq("rarity", rarity)
+        .order("name")
+        .limit(limit);
+
+      if (error) {
+        console.error("Error getting items by rarity:", error);
+        return [];
+      }
+
+      return data || [];
+    } catch (error) {
+      console.error("Error getting items by rarity:", error);
+      return [];
+    }
+  }
+
+  // Get item by name
+  static async getItemByName(itemName: string): Promise<CS2Item | null> {
+    try {
+      const { data, error } = await supabase
+        .from("items")
+        .select("*")
+        .eq("name", itemName)
+        .single();
+
+      if (error) {
+        console.error("Error getting item by name:", error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error("Error getting item by name:", error);
+      return null;
+    }
+  }
+
+  // Get item statistics
+  static async getItemStatistics(): Promise<{
+    totalItems: number;
+    byType: Record<string, number>;
+    byRarity: Record<string, number>;
+  }> {
+    try {
+      // Get total count
+      const { count: totalItems } = await supabase
+        .from("items")
+        .select("*", { count: "exact", head: true });
+
+      // Get counts by weapon type
+      const { data: typeStats } = await supabase
+        .from("items")
+        .select("weapon_type")
+        .order("weapon_type");
+
+      // Get counts by rarity
+      const { data: rarityStats } = await supabase
+        .from("items")
+        .select("rarity")
+        .order("rarity");
+
+      const byType: Record<string, number> = {};
+      const byRarity: Record<string, number> = {};
+
+      typeStats?.forEach((item) => {
+        byType[item.weapon_type] = (byType[item.weapon_type] || 0) + 1;
+      });
+
+      rarityStats?.forEach((item) => {
+        byRarity[item.rarity] = (byRarity[item.rarity] || 0) + 1;
+      });
+
+      return {
+        totalItems: totalItems || 0,
+        byType,
+        byRarity,
+      };
+    } catch (error) {
+      console.error("Error getting item statistics:", error);
+      return {
+        totalItems: 0,
+        byType: {},
+        byRarity: {},
+      };
+    }
+  }
+}
+
 // Price alert management functions
 export class AlertService {
   // Create a new price alert
@@ -354,11 +541,15 @@ export class AlertService {
     basePrice?: number
   ): Promise<PriceAlert | null> {
     try {
+      // Try to find the item in our database
+      const item = await ItemService.getItemByName(itemName);
+
       const { data: alert, error } = await adminSupabase
         .from("price_alerts")
         .insert({
           user_id: userId,
           item_name: itemName,
+          item_id: item?.id || null,
           target_price: targetPrice,
           alert_type: alertType,
           percentage_threshold: percentageThreshold,
@@ -475,8 +666,12 @@ export class PriceService {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
 
+      // Try to find the item in our database
+      const item = await ItemService.getItemByName(itemName);
+
       await supabase.from("price_cache").upsert({
         item_name: itemName,
+        item_id: item?.id || null,
         price,
         currency,
         volume,
@@ -489,6 +684,7 @@ export class PriceService {
       // Also store in historical data
       await supabase.from("price_history").insert({
         item_name: itemName,
+        item_id: item?.id || null,
         price,
         currency,
         volume,

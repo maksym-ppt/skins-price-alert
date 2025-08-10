@@ -15,11 +15,36 @@ CREATE TABLE users (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- CS2 Items table for storing all items from CSV files
+CREATE TABLE items (
+  id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+  name VARCHAR(500) NOT NULL UNIQUE,
+  weapon_name VARCHAR(255) NOT NULL,
+  weapon_type VARCHAR(100) NOT NULL,
+  skin_name VARCHAR(255),
+  rarity VARCHAR(100) NOT NULL,
+  rarity_definition VARCHAR(100),
+  rarity_color VARCHAR(50),
+  collection VARCHAR(500),
+  introduced_date DATE,
+  search_vector tsvector GENERATED ALWAYS AS (
+    to_tsvector('english', 
+      COALESCE(name, '') || ' ' || 
+      COALESCE(weapon_name, '') || ' ' || 
+      COALESCE(skin_name, '') || ' ' || 
+      COALESCE(collection, '')
+    )
+  ) STORED,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- Price alerts table
 CREATE TABLE price_alerts (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   user_id UUID REFERENCES users(id) ON DELETE CASCADE,
   item_name VARCHAR(500) NOT NULL,
+  item_id UUID REFERENCES items(id) ON DELETE CASCADE,
   game_id INTEGER DEFAULT 730, -- Default to CS2
   currency_id INTEGER DEFAULT 1, -- Default to USD
   target_price DECIMAL(10,2) NOT NULL,
@@ -36,6 +61,7 @@ CREATE TABLE price_alerts (
 CREATE TABLE price_cache (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   item_name VARCHAR(500) NOT NULL,
+  item_id UUID REFERENCES items(id) ON DELETE CASCADE,
   game_id INTEGER DEFAULT 730, -- Default to CS2
   currency_id INTEGER DEFAULT 1, -- Default to USD
   price DECIMAL(10,2) NOT NULL,
@@ -51,6 +77,7 @@ CREATE TABLE price_cache (
 CREATE TABLE price_history (
   id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
   item_name VARCHAR(500) NOT NULL,
+  item_id UUID REFERENCES items(id) ON DELETE CASCADE,
   game_id INTEGER DEFAULT 730, -- Default to CS2
   currency_id INTEGER DEFAULT 1, -- Default to USD
   price DECIMAL(10,2) NOT NULL,
@@ -63,11 +90,20 @@ CREATE TABLE price_history (
 
 -- Create indexes for better performance
 CREATE INDEX idx_users_telegram_id ON users(telegram_id);
+CREATE INDEX idx_items_name ON items(name);
+CREATE INDEX idx_items_weapon_name ON items(weapon_name);
+CREATE INDEX idx_items_weapon_type ON items(weapon_type);
+CREATE INDEX idx_items_rarity ON items(rarity);
+CREATE INDEX idx_items_collection ON items(collection);
+CREATE INDEX idx_items_search_vector ON items USING GIN(search_vector);
 CREATE INDEX idx_price_alerts_user_id ON price_alerts(user_id);
+CREATE INDEX idx_price_alerts_item_id ON price_alerts(item_id);
 CREATE INDEX idx_price_alerts_active ON price_alerts(is_active);
 CREATE INDEX idx_price_cache_item_name ON price_cache(item_name);
+CREATE INDEX idx_price_cache_item_id ON price_cache(item_id);
 CREATE INDEX idx_price_cache_expires ON price_cache(expires_at);
 CREATE INDEX idx_price_history_item_name ON price_history(item_name);
+CREATE INDEX idx_price_history_item_id ON price_history(item_id);
 CREATE INDEX idx_price_history_recorded ON price_history(recorded_at);
 
 -- Create updated_at trigger function
@@ -83,11 +119,15 @@ $$ language 'plpgsql';
 CREATE TRIGGER update_users_updated_at BEFORE UPDATE ON users
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
+CREATE TRIGGER update_items_updated_at BEFORE UPDATE ON items
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
+
 CREATE TRIGGER update_price_alerts_updated_at BEFORE UPDATE ON price_alerts
   FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
 
 -- Row Level Security (RLS) policies
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
+ALTER TABLE items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE price_alerts ENABLE ROW LEVEL SECURITY;
 
 -- Users can only access their own data
@@ -105,6 +145,16 @@ CREATE POLICY "Public can insert users" ON users
   FOR INSERT WITH CHECK (true);
 
 CREATE POLICY "Public can update users" ON users
+  FOR UPDATE USING (true);
+
+-- Items are publicly readable for search functionality
+CREATE POLICY "Public can view items" ON items
+  FOR SELECT USING (true);
+
+CREATE POLICY "Public can insert items" ON items
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public can update items" ON items
   FOR UPDATE USING (true);
 
 -- Price alerts policies
@@ -128,3 +178,13 @@ CREATE POLICY "Users can update own alerts" ON price_alerts
       SELECT id FROM users WHERE telegram_id = auth.uid()::text
     )
   );
+
+-- Public access for server-side operations
+CREATE POLICY "Public can view price_alerts" ON price_alerts
+  FOR SELECT USING (true);
+
+CREATE POLICY "Public can insert price_alerts" ON price_alerts
+  FOR INSERT WITH CHECK (true);
+
+CREATE POLICY "Public can update price_alerts" ON price_alerts
+  FOR UPDATE USING (true);

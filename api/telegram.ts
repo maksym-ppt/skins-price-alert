@@ -7,6 +7,7 @@ import {
   TIER_LIMITS,
 } from "../src/constants";
 import { AlertService, UserService } from "../src/database";
+import { SearchService, SKIN_CONDITIONS } from "../src/search-service";
 import {
   Apps,
   Currency,
@@ -42,6 +43,7 @@ bot.start(async (ctx) => {
         `I can help you track prices from multiple Steam games.\n\n` +
         `📋 Available commands:\n` +
         `• Send any item name to check its price\n` +
+        `• /search - Step-by-step item search\n` +
         `• /games - List supported games\n` +
         `• /currency - Set your preferred currency\n` +
         `• /alerts - Manage your price alerts\n` +
@@ -54,7 +56,7 @@ bot.start(async (ctx) => {
         `• Absolute: "50" (alert at $50)\n` +
         `• Percentage drop: "-10%" (alert when price drops 10%)\n` +
         `• Percentage increase: "+20%" (alert when price increases 20%)\n\n` +
-        `Try sending: "AK-47 | Redline (Field-Tested)"`
+        `Try sending: "AK-47 | Redline (Field-Tested)" or use /search`
     );
   } else {
     await ctx.reply(
@@ -69,6 +71,7 @@ bot.help(async (ctx) => {
     `🎮 Steam Skins Price Alert Bot Help\n\n` +
       `📋 Commands:\n` +
       `• /start - Welcome message and registration\n` +
+      `• /search - Step-by-step item search\n` +
       `• /games - List supported games\n` +
       `• /currency - Set your preferred currency\n` +
       `• /alerts - Manage your price alerts\n` +
@@ -76,6 +79,7 @@ bot.help(async (ctx) => {
       `• /help - Show this help message\n\n` +
       `💡 Usage:\n` +
       `• Send any item name to check its current price\n` +
+      `• Use /search for guided item selection\n` +
       `• Use exact item names like "AK-47 | Redline (Field-Tested)"\n` +
       `• Default game: Counter-Strike 2\n` +
       `• Default currency: USD\n\n` +
@@ -306,6 +310,478 @@ bot.action("ALERT_TARGET", async (ctx) => {
   } catch (err) {
     console.error("Error handling ALERT_TARGET:", err);
   }
+});
+
+// Search command - Step-by-step item search
+bot.command("search", async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  // Clear any existing search session
+  SearchService.clearSearchSession(user.id.toString());
+
+  // Get weapon types
+  const weaponTypes = await SearchService.getWeaponTypes();
+
+  if (weaponTypes.length === 0) {
+    await ctx.reply(
+      "❌ No weapon types found. Please import items first using /import-csv"
+    );
+    return;
+  }
+
+  // Create search session
+  SearchService.createSearchSession(user.id.toString());
+
+  // Create inline keyboard for weapon types
+  const keyboard = weaponTypes.map((type) => [
+    Markup.button.callback(type, `search_type_${type}`),
+  ]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.reply(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 1: Choose weapon type\n\n` +
+      `Available types:\n` +
+      weaponTypes.map((type) => `• ${type}`).join("\n"),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
+
+// Handle search type selection
+bot.action(/^search_type_(.+)$/, async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  const weaponType = ctx.match[1];
+  const session = SearchService.getSearchSession(user.id.toString());
+
+  if (!session) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  // Update session
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "weapon_name",
+    weaponType,
+  });
+
+  // Get weapon names for this type
+  const weaponNames = await SearchService.getWeaponNames(weaponType);
+
+  if (weaponNames.length === 0) {
+    await ctx.answerCbQuery("❌ No weapons found for this type.");
+    return;
+  }
+
+  // Create keyboard for weapon names (limit to 20 to avoid Telegram limits)
+  const keyboard = weaponNames
+    .slice(0, 20)
+    .map((name) => [Markup.button.callback(name, `search_weapon_${name}`)]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.editMessageText(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 2: Choose weapon name\n\n` +
+      `Type: ${weaponType}\n` +
+      `Available weapons:\n` +
+      weaponNames
+        .slice(0, 20)
+        .map((name) => `• ${name}`)
+        .join("\n") +
+      (weaponNames.length > 20
+        ? `\n... and ${weaponNames.length - 20} more`
+        : ""),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
+
+// Handle weapon name selection
+bot.action(/^search_weapon_(.+)$/, async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  const weaponName = ctx.match[1];
+  const session = SearchService.getSearchSession(user.id.toString());
+
+  if (!session) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  // Update session
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "skin_name",
+    weaponName,
+  });
+
+  // Get skin names for this weapon
+  const skinNames = await SearchService.getSkinNames(weaponName);
+
+  if (skinNames.length === 0) {
+    // No skins available - this should only happen for knives
+    const session = SearchService.getSearchSession(user.id.toString());
+    if (session?.weaponType?.toLowerCase() === "knife") {
+      await handleNoSkins(ctx, session.weaponType!, weaponName);
+    } else {
+      await ctx.answerCbQuery(
+        "❌ No skins found for this weapon. This might be a data issue."
+      );
+      await ctx.editMessageText(
+        `❌ No skins found for ${weaponName}\n\n` +
+          `This weapon doesn't have any skins in the database.\n` +
+          `Please try another weapon or contact support.`,
+        {
+          reply_markup: Markup.inlineKeyboard([
+            [Markup.button.callback("🔄 Start Over", "search_restart")],
+            [Markup.button.callback("❌ Cancel", "search_cancel")],
+          ]).reply_markup,
+        }
+      );
+    }
+    return;
+  }
+
+  // Create keyboard for skin names
+  const keyboard = skinNames
+    .slice(0, 20)
+    .map((skin) => [Markup.button.callback(skin, `search_skin_${skin}`)]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.editMessageText(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 3: Choose skin name\n\n` +
+      `Type: ${session.weaponType}\n` +
+      `Weapon: ${weaponName}\n` +
+      `Available skins:\n` +
+      skinNames
+        .slice(0, 20)
+        .map((skin) => `• ${skin}`)
+        .join("\n") +
+      (skinNames.length > 20 ? `\n... and ${skinNames.length - 20} more` : ""),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
+
+// Handle skin name selection
+bot.action(/^search_skin_(.+)$/, async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  const skinName = ctx.match[1];
+  const session = SearchService.getSearchSession(user.id.toString());
+
+  if (!session) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  // Update session
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "condition",
+    skinName,
+  });
+
+  // Create keyboard for skin conditions
+  const keyboard = SKIN_CONDITIONS.map((condition) => [
+    Markup.button.callback(condition, `search_condition_${condition}`),
+  ]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.editMessageText(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 4: Choose skin condition\n\n` +
+      `Type: ${session.weaponType}\n` +
+      `Weapon: ${session.weaponName}\n` +
+      `Skin: ${skinName}\n` +
+      `Available conditions:\n` +
+      SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
+
+// Handle condition selection
+bot.action(/^search_condition_(.+)$/, async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  const condition = ctx.match[1] as any;
+  const session = SearchService.getSearchSession(user.id.toString());
+
+  if (!session) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  // Update session
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "category",
+    condition,
+  });
+
+  // Get available categories based on weapon type
+  const categories = SearchService.getAvailableCategories(session.weaponType!);
+
+  // Create keyboard for categories
+  const keyboard = categories.map((category) => [
+    Markup.button.callback(category, `search_category_${category}`),
+  ]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.editMessageText(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 5: Choose category\n\n` +
+      `Type: ${session.weaponType}\n` +
+      `Weapon: ${session.weaponName}\n` +
+      `Skin: ${session.skinName}\n` +
+      `Condition: ${condition}\n` +
+      `Available categories:\n` +
+      categories.map((category) => `• ${category}`).join("\n"),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
+
+// Handle category selection
+bot.action(/^search_category_(.+)$/, async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  const category = ctx.match[1];
+  const session = SearchService.getSearchSession(user.id.toString());
+
+  if (!session) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  // Generate final item name
+  const finalName = SearchService.generateItemName(
+    session.weaponType!,
+    session.weaponName!,
+    session.skinName || null,
+    session.condition!,
+    category
+  );
+
+  // Update session
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "complete",
+    category,
+    finalName,
+  });
+
+  // Check if item exists in database
+  const exists = await SearchService.validateItemName(finalName);
+
+  if (!exists) {
+    // Get similar items for suggestions
+    const similarItems = await SearchService.getSimilarItems(finalName);
+
+    let message =
+      `❌ Item not found in database\n\n` + `Generated name: ${finalName}\n\n`;
+
+    if (similarItems.length > 0) {
+      message +=
+        `Similar items found:\n` +
+        similarItems.map((item) => `• ${item}`).join("\n") +
+        "\n\n";
+    }
+
+    message += `💡 Try searching manually or use /search again.`;
+
+    await ctx.editMessageText(message, {
+      reply_markup: Markup.inlineKeyboard([
+        [Markup.button.callback("🔄 Start Over", "search_restart")],
+        [Markup.button.callback("❌ Cancel", "search_cancel")],
+      ]).reply_markup,
+    });
+    return;
+  }
+
+  // Item found, show price check
+  await ctx.editMessageText(
+    `✅ Item found!\n\n` +
+      `Generated name: ${finalName}\n\n` +
+      `Click below to check the price:`,
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback(
+            "💰 Check Price",
+            `check_price_${encodeURIComponent(finalName)}`
+          ),
+        ],
+        [Markup.button.callback("🔄 Search Another", "search_restart")],
+        [Markup.button.callback("❌ Cancel", "search_cancel")],
+      ]).reply_markup,
+    }
+  );
+});
+
+// Helper function for weapons without skins
+async function handleNoSkins(ctx: any, weaponType: string, weaponName: string) {
+  const user = ctx.from;
+  if (!user) return;
+
+  const session = SearchService.getSearchSession(user.id.toString());
+
+  if (!session) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  // Update session
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "condition",
+    skinName: undefined,
+  });
+
+  // Create keyboard for skin conditions
+  const keyboard = SKIN_CONDITIONS.map((condition) => [
+    Markup.button.callback(condition, `search_condition_${condition}`),
+  ]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.editMessageText(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 4: Choose skin condition\n\n` +
+      `Type: ${weaponType}\n` +
+      `Weapon: ${weaponName}\n` +
+      `Skin: None (base weapon)\n` +
+      `Available conditions:\n` +
+      SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+}
+
+// Handle price check from search
+bot.action(/^check_price_(.+)$/, async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  const itemName = decodeURIComponent(ctx.match[1]);
+
+  // Check rate limits
+  const rateLimit = await UserService.canMakePriceCheck(user.id);
+  if (!rateLimit.allowed) {
+    await ctx.answerCbQuery(
+      "⏰ Rate limit exceeded. Please wait before checking another price."
+    );
+    return;
+  }
+
+  // Increment usage counter
+  await UserService.incrementPriceCheck(user.id);
+
+  // Get price
+  const priceResult = await getSteamPrice(itemName, {
+    appId: Apps.CS2,
+    currency: Currency.USD,
+  });
+
+  const cacheIndicator = priceResult.cached ? " (cached)" : "";
+  const rateLimitInfo = `\n📊 Rate limit: ${rateLimit.remaining} checks remaining this minute`;
+
+  await ctx.editMessageText(
+    join([
+      `💰 Price Check Result${cacheIndicator}${rateLimitInfo}\n\n`,
+      `${priceResult.message}\n`,
+      ...(priceResult.marketUrl
+        ? [link("🔗 View on Steam Market", priceResult.marketUrl)]
+        : []),
+      '\n\n💡 Tip: Tap a button below, then reply with a number:\n• Drop: 10 → -10%\n• Increase: 20 → +20%\n• Target: 50 → $50\nOr reply to this message with "50", "-10%", or "+20%".',
+    ]),
+    {
+      reply_markup: Markup.inlineKeyboard([
+        [
+          Markup.button.callback("📉 Drop alert", "ALERT_DROP"),
+          Markup.button.callback("📈 Increase alert", "ALERT_INCREASE"),
+          Markup.button.callback("🎯 Target alert", "ALERT_TARGET"),
+        ],
+        [Markup.button.callback("🔄 Search Another", "search_restart")],
+        [Markup.button.callback("❌ Close", "search_cancel")],
+      ]).reply_markup,
+    }
+  );
+});
+
+// Handle search restart
+bot.action("search_restart", async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  // Clear session and start over
+  SearchService.clearSearchSession(user.id.toString());
+
+  // Redirect to /search command
+  await ctx.answerCbQuery("🔄 Starting new search...");
+
+  // Simulate /search command
+  const weaponTypes = await SearchService.getWeaponTypes();
+
+  if (weaponTypes.length === 0) {
+    await ctx.editMessageText(
+      "❌ No weapon types found. Please import items first using /import-csv"
+    );
+    return;
+  }
+
+  // Create search session
+  SearchService.createSearchSession(user.id.toString());
+
+  // Create inline keyboard for weapon types
+  const keyboard = weaponTypes.map((type) => [
+    Markup.button.callback(type, `search_type_${type}`),
+  ]);
+  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+
+  await ctx.editMessageText(
+    `🔍 Step-by-Step Item Search\n\n` +
+      `Step 1: Choose weapon type\n\n` +
+      `Available types:\n` +
+      weaponTypes.map((type) => `• ${type}`).join("\n"),
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
+
+// Handle search cancel
+bot.action("search_cancel", async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  // Clear search session
+  SearchService.clearSearchSession(user.id.toString());
+
+  await ctx.editMessageText(
+    "❌ Search cancelled.\n\nUse /search to start a new search or send an item name directly to check its price."
+  );
 });
 
 // Helper function to parse alert input
