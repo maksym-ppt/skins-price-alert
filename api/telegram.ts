@@ -2,6 +2,8 @@ import { Markup, Telegraf } from "telegraf";
 import { message } from "telegraf/filters";
 import { join, link } from "telegraf/format";
 import {
+  CATEGORY_DISPLAY_NAMES,
+  CATEGORY_IDS,
   DEFAULT_TIER,
   SKIN_CONDITIONS,
   TIER_DISPLAY_NAMES,
@@ -16,32 +18,6 @@ import {
   getAvailableGames,
   getSteamPrice,
 } from "../src/steam";
-
-// Simple mapping for categories to avoid encoding issues
-const CATEGORY_MAP: Record<string, string> = {
-  Normal: "normal",
-  "StatTrak™": "stattrak",
-  Souvenir: "souvenir",
-  "Normal ★": "normal_star",
-  "★ StatTrak™": "star_stattrak",
-};
-
-const CATEGORY_REVERSE_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(CATEGORY_MAP).map(([key, value]) => [value, key])
-);
-
-// Simple mapping for conditions to avoid encoding issues
-const CONDITION_MAP: Record<string, string> = {
-  "Factory New": "fn",
-  "Minimal Wear": "mw",
-  "Field-Tested": "ft",
-  "Well-Worn": "ww",
-  "Battle-Scarred": "bs",
-};
-
-const CONDITION_REVERSE_MAP: Record<string, string> = Object.fromEntries(
-  Object.entries(CONDITION_MAP).map(([key, value]) => [value, key])
-);
 
 const bot = new Telegraf(process.env.BOT_TOKEN!);
 
@@ -568,7 +544,7 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
   const keyboard = SKIN_CONDITIONS.map((condition) => [
     Markup.button.callback(
       condition,
-      `search_condition_${CONDITION_MAP[condition] || condition}`
+      `search_condition_${encodeURIComponent(condition)}`
     ),
   ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
@@ -592,9 +568,7 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const conditionKey = ctx.match[1];
-  const condition = (CONDITION_REVERSE_MAP[conditionKey] ||
-    conditionKey) as any;
+  const condition = decodeURIComponent(ctx.match[1]) as any;
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -617,7 +591,7 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
   const keyboard = categories.map((category) => [
     Markup.button.callback(
       category,
-      `search_category_${CATEGORY_MAP[category] || category}`
+      `search_category_${CATEGORY_IDS[category as keyof typeof CATEGORY_IDS]}`
     ),
   ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
@@ -642,8 +616,9 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const categoryKey = ctx.match[1];
-  const category = CATEGORY_REVERSE_MAP[categoryKey] || categoryKey;
+  const categoryId = ctx.match[1];
+  const category =
+    CATEGORY_DISPLAY_NAMES[categoryId as keyof typeof CATEGORY_DISPLAY_NAMES];
   const session = SearchService.getSearchSession(user.id.toString());
 
   if (!session) {
@@ -750,7 +725,7 @@ async function handleNoSkins(ctx: any, weaponType: string, weaponName: string) {
   const keyboard = SKIN_CONDITIONS.map((condition) => [
     Markup.button.callback(
       condition,
-      `search_condition_${CONDITION_MAP[condition] || condition}`
+      `search_condition_${encodeURIComponent(condition)}`
     ),
   ]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);

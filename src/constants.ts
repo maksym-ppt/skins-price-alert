@@ -55,3 +55,23 @@ export const ITEM_CATEGORIES = {
 export type WeaponCategory = (typeof ITEM_CATEGORIES.WEAPON)[number];
 export type KnifeCategory = (typeof ITEM_CATEGORIES.KNIFE)[number];
 export type GloveCategory = (typeof ITEM_CATEGORIES.GLOVES)[number];
+
+// Category ID mapping for button callbacks (to avoid special characters)
+export const CATEGORY_IDS = {
+  Normal: "normal",
+  "StatTrak™": "stattrak",
+  Souvenir: "souvenir",
+  "Normal ★": "normal_star",
+  "★ StatTrak™": "star_stattrak",
+} as const;
+
+export type CategoryId = (typeof CATEGORY_IDS)[keyof typeof CATEGORY_IDS];
+
+// Reverse mapping from ID to display name
+export const CATEGORY_DISPLAY_NAMES: Record<CategoryId, string> = {
+  normal: "Normal",
+  stattrak: "StatTrak™",
+  souvenir: "Souvenir",
+  normal_star: "Normal ★",
+  star_stattrak: "★ StatTrak™",
+};
