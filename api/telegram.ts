@@ -362,25 +362,25 @@ bot.command("search", async (ctx) => {
 
   await ctx.reply(
     `🔍 Step-by-Step Item Search\n\n` +
-      `Step 1: Choose weapon type\n\n` +
-      `Available types:\n` +
-      weaponTypes
-        .map((type, index) => {
-          const isEven = index % 2 === 0;
-          const isLast = index === weaponTypes.length - 1;
-          const nextType = weaponTypes[index + 1];
+      `Step 1: Choose item type\n\n`,
+      // `Available types:\n` +
+      // weaponTypes
+      //   .map((type, index) => {
+      //     const isEven = index % 2 === 0;
+      //     const isLast = index === weaponTypes.length - 1;
+      //     const nextType = weaponTypes[index + 1];
 
-          if (isEven && nextType) {
-            return `• ${type.padEnd(15)} • ${nextType}`;
-          } else if (isEven && isLast) {
-            return `• ${type}`;
-          } else if (!isEven) {
-            return ""; // Skip odd indices as they're handled above
-          }
-          return `• ${type}`;
-        })
-        .filter((line) => line !== "")
-        .join("\n"),
+      //     if (isEven && nextType) {
+      //       return `• ${type.padEnd(15)} • ${nextType}`;
+      //     } else if (isEven && isLast) {
+      //       return `• ${type}`;
+      //     } else if (!isEven) {
+      //       return ""; // Skip odd indices as they're handled above
+      //     }
+      //     return `• ${type}`;
+      //   })
+      //   .filter((line) => line !== "")
+      //   .join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -424,16 +424,16 @@ bot.action(/^search_type_(.+)$/, async (ctx) => {
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
-      `Step 2: Choose weapon name\n\n` +
-      `Type: ${weaponType}\n` +
-      `Available weapons:\n` +
-      weaponNames
-        .slice(0, 20)
-        .map((name) => `• ${name}`)
-        .join("\n") +
-      (weaponNames.length > 20
-        ? `\n... and ${weaponNames.length - 20} more`
-        : ""),
+      `Step 2: Choose item name\n\n` +
+      `Type: ${weaponType}\n`,
+      // `Available weapons:\n` +
+      // weaponNames
+      //   .slice(0, 20)
+      //   .map((name) => `• ${name}`)
+      //   .join("\n") +
+      // (weaponNames.length > 20
+      //   ? `\n... and ${weaponNames.length - 20} more`
+      //   : ""),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -490,7 +490,7 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
 
   // Create keyboard for skin names
   const keyboard = skinNames
-    .slice(0, 20)
+    // .slice(0, 20)
     .map((skin) => [Markup.button.callback(skin, `search_skin_${skin}`)]);
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
@@ -498,13 +498,13 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 3: Choose skin name\n\n` +
       `Type: ${session.weaponType}\n` +
-      `Weapon: ${weaponName}\n` +
-      `Available skins:\n` +
-      skinNames
-        .slice(0, 20)
-        .map((skin) => `• ${skin}`)
-        .join("\n") +
-      (skinNames.length > 20 ? `\n... and ${skinNames.length - 20} more` : ""),
+      `Name: ${weaponName}\n`,
+      // `Available skins:\n` +
+      // skinNames
+      //   .slice(0, 20)
+      //   .map((skin) => `• ${skin}`)
+      //   .join("\n") +
+      // (skinNames.length > 20 ? `\n... and ${skinNames.length - 20} more` : ""),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -540,12 +540,12 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
-      `Step 4: Choose skin condition\n\n` +
+      `Step 4: Choose condition\n\n` +
       `Type: ${session.weaponType}\n` +
-      `Weapon: ${session.weaponName}\n` +
+      `Name: ${session.weaponName}\n` +
       `Skin: ${skinName}\n` +
-      `Available conditions:\n` +
-      SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
+      `Available conditions:\n`,
+      // SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -586,11 +586,11 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 5: Choose category\n\n` +
       `Type: ${session.weaponType}\n` +
-      `Weapon: ${session.weaponName}\n` +
+      `Name: ${session.weaponName}\n` +
       `Skin: ${session.skinName}\n` +
       `Condition: ${condition}\n` +
-      `Available categories:\n` +
-      categories.map((category) => `• ${category}`).join("\n"),
+      `Available categories:\n`,
+      // categories.map((category) => `• ${category}`).join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
