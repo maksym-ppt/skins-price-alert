@@ -688,12 +688,7 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
       `Click below to check the price:`,
     {
       reply_markup: Markup.inlineKeyboard([
-        [
-          Markup.button.callback(
-            "💰 Check Price",
-            `check_price_${encodeURIComponent(finalName)}`
-          ),
-        ],
+        [Markup.button.callback("💰 Check Price", "check_price_from_search")],
         [Markup.button.callback("🔄 Search Another", "search_restart")],
         [Markup.button.callback("❌ Cancel", "search_cancel")],
       ]).reply_markup,
@@ -745,11 +740,19 @@ async function handleNoSkins(ctx: any, weaponType: string, weaponName: string) {
 }
 
 // Handle price check from search
-bot.action(/^check_price_(.+)$/, async (ctx) => {
+bot.action("check_price_from_search", async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
-  const itemName = decodeURIComponent(ctx.match[1]);
+  const session = SearchService.getSearchSession(user.id.toString());
+  if (!session || !session.finalName) {
+    await ctx.answerCbQuery(
+      "❌ Search session expired. Please use /search again."
+    );
+    return;
+  }
+
+  const itemName = session.finalName;
 
   // Check rate limits
   const rateLimit = await UserService.canMakePriceCheck(user.id);
