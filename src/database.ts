@@ -325,6 +325,27 @@ export class UserService {
     }
   }
 
+  // Get user's active alerts count
+  static async getActiveAlertsCount(userId: string): Promise<number> {
+    try {
+      const { data: alerts, error } = await adminSupabase
+        .from("price_alerts")
+        .select("id")
+        .eq("user_id", userId)
+        .eq("is_active", true);
+
+      if (error) {
+        console.error("Error getting alerts count:", error);
+        return 0;
+      }
+
+      return alerts?.length || 0;
+    } catch (error) {
+      console.error("Error in getActiveAlertsCount:", error);
+      return 0;
+    }
+  }
+
   // Check if user can create more alerts
   static async canCreateAlert(
     telegramId: string | number
@@ -333,7 +354,9 @@ export class UserService {
       const user = await this.getUser(telegramId);
       if (!user) return { allowed: false, current: 0, limit: 0 };
 
-      const currentAlerts = user.usage?.alerts_created || 0;
+      // Get actual active alerts count from database
+      const currentAlerts = await this.getActiveAlertsCount(user.id);
+
       const limit =
         user.limits?.max_alerts ||
         TIER_LIMITS[user.limits?.tier || DEFAULT_TIER].max_alerts;
@@ -578,25 +601,6 @@ export class AlertService {
       if (error) {
         console.error("Error creating alert:", error);
         return null;
-      }
-
-      // Increment user's alert count
-      const user = await adminSupabase
-        .from("users")
-        .select("usage")
-        .eq("id", userId)
-        .single();
-
-      if (user.data) {
-        await adminSupabase
-          .from("users")
-          .update({
-            usage: {
-              ...user.data.usage,
-              alerts_created: (user.data.usage?.alerts_created || 0) + 1,
-            },
-          })
-          .eq("id", userId);
       }
 
       return alert;

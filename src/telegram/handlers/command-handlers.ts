@@ -32,7 +32,7 @@ export class CommandHandlers {
           `• Send any item name to check its price\n` +
           `• /search - Step-by-step item search\n` +
           `• /restart - Restart current search session\n` +
-          `• /games - List supported games\n` +
+          // `• /games - List supported games\n` +
           `• /currency - Set your preferred currency\n` +
           `• /alerts - Manage your price alerts\n` +
           `• /profile - View your profile\n` +
@@ -55,12 +55,12 @@ export class CommandHandlers {
 
   static async handleHelp(ctx: Context) {
     await ctx.reply(
-      `🎮 Steam Skins Price Alert Bot Help\n\n` +
+      `🎮 CS2 Skins Price Alert Bot Help\n\n` +
         `📋 Commands:\n` +
         `• /start - Welcome message and registration\n` +
         `• /search - Step-by-step item search\n` +
         `• /restart - Restart current search session\n` +
-        `• /games - List supported games\n` +
+        // `• /games - List supported games\n` +
         `• /currency - Set your preferred currency\n` +
         `• /alerts - Manage your price alerts\n` +
         `• /profile - View your profile\n` +
@@ -142,6 +142,9 @@ export class CommandHandlers {
       price_checks_this_minute: 0,
     };
 
+    // Get actual active alerts count from database
+    const activeAlertsCount = await UserService.getActiveAlertsCount(dbUser.id);
+
     await ctx.reply(
       `👤 Your Profile\n\n` +
         `🆔 Telegram ID: ${user.id}\n` +
@@ -157,7 +160,7 @@ export class CommandHandlers {
         }\n\n` +
         `📊 Usage (${limits.tier} tier):\n` +
         `• Price checks: ${usage.price_checks_this_minute}/${limits.price_checks_per_minute}/minute\n` +
-        `• Alerts: ${usage.alerts_created}/${limits.max_alerts}`
+        `• Alerts: ${activeAlertsCount}/${limits.max_alerts}`
     );
   }
 
