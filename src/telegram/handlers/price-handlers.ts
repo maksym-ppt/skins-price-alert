@@ -42,20 +42,28 @@ export class PriceHandlers {
     const cacheIndicator = priceResult.cached ? " (cached)" : "";
     const rateLimitInfo = `\n📊 Rate limit: ${rateLimit.remaining} checks remaining this minute`;
 
-    await ctx.editMessageText(
-      join([
-        `💰 Price Check Result${cacheIndicator}${rateLimitInfo}\n\n`,
-        `📦 Item: "${itemName}"\n\n`,
-        `${priceResult.message}\n`,
-        ...(priceResult.marketUrl
-          ? [link("🔗 View on Steam Market", priceResult.marketUrl)]
-          : []),
-        '\n\n💡 Tip: Tap a button below, then reply with a number:\n• Drop: 10 → -10%\n• Increase: 20 → +20%\n• Target: 50 → $50\nOr reply to this message with "50", "-10%", or "+20%".',
-      ]),
-      {
-        reply_markup: KeyboardUtils.createAlertButtonsWithSearchKeyboard(),
+    try {
+      await ctx.editMessageText(
+        join([
+          `💰 Price Check Result${cacheIndicator}${rateLimitInfo}\n\n`,
+          `📦 Item: "${itemName}"\n\n`,
+          `${priceResult.message}\n`,
+          ...(priceResult.marketUrl
+            ? [link("🔗 View on Steam Market", priceResult.marketUrl)]
+            : []),
+          '\n\n💡 Tip: Tap a button below, then reply with a number:\n• Drop: 10 → -10%\n• Increase: 20 → +20%\n• Target: 50 → $50\nOr reply to this message with "50", "-10%", or "+20%".',
+        ]),
+        {
+          reply_markup: KeyboardUtils.createAlertButtonsWithSearchKeyboard(),
+        }
+      );
+    } catch (error: any) {
+      if (error.description?.includes("message is not modified")) {
+        await ctx.answerCbQuery("✅ Updated!");
+      } else {
+        throw error;
       }
-    );
+    }
   }
 
   static async handleDirectPriceCheck(ctx: Context, message: string) {

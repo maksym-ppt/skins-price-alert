@@ -3,6 +3,19 @@ import { CATEGORY_DISPLAY_NAMES, SKIN_CONDITIONS } from "../../constants";
 import { SearchService } from "../../search-service";
 import { KeyboardUtils } from "../utils/keyboard-utils";
 
+// Utility function to safely edit messages
+async function safeEditMessage(ctx: Context, text: string, reply_markup: any) {
+  try {
+    await ctx.editMessageText(text, { reply_markup });
+  } catch (error: any) {
+    if (error.description?.includes("message is not modified")) {
+      await ctx.answerCbQuery("✅ Updated!");
+    } else {
+      throw error;
+    }
+  }
+}
+
 export class SearchHandlers {
   static async handleSearchTypeSelection(ctx: Context, weaponType: string) {
     const user = ctx.from;
@@ -34,13 +47,12 @@ export class SearchHandlers {
     // Create keyboard for weapon names using utility
     const keyboard = KeyboardUtils.createWeaponNameKeyboard(weaponNames);
 
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `🔍 Step-by-Step Item Search\n\n` +
         `Step 2: Choose item name\n\n` +
         `Type: ${weaponType}\n`,
-      {
-        reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
-      }
+      Markup.inlineKeyboard(keyboard).reply_markup
     );
   }
 
@@ -74,16 +86,15 @@ export class SearchHandlers {
         await ctx.answerCbQuery(
           "❌ No skins found for this weapon. This might be a data issue."
         );
-        await ctx.editMessageText(
+        await safeEditMessage(
+          ctx,
           `❌ No skins found for ${weaponName}\n\n` +
             `This weapon doesn't have any skins in the database.\n` +
             `Please try another weapon or contact support.`,
-          {
-            reply_markup: Markup.inlineKeyboard([
-              [Markup.button.callback("🔄 Start Over", "search_restart")],
-              [Markup.button.callback("❌ Cancel", "search_cancel")],
-            ]).reply_markup,
-          }
+          Markup.inlineKeyboard([
+            [Markup.button.callback("🔄 Start Over", "search_restart")],
+            [Markup.button.callback("❌ Cancel", "search_cancel")],
+          ]).reply_markup
         );
       }
       return;
@@ -92,14 +103,13 @@ export class SearchHandlers {
     // Create keyboard for skin names using utility
     const keyboard = KeyboardUtils.createSkinNameKeyboard(skinNames);
 
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `🔍 Step-by-Step Item Search\n\n` +
         `Step 3: Choose skin name\n\n` +
         `Type: ${session.weaponType}\n` +
         `Name: ${weaponName}\n`,
-      {
-        reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
-      }
+      Markup.inlineKeyboard(keyboard).reply_markup
     );
   }
 
@@ -127,16 +137,15 @@ export class SearchHandlers {
       ...SKIN_CONDITIONS,
     ]);
 
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `🔍 Step-by-Step Item Search\n\n` +
         `Step 4: Choose condition\n\n` +
         `Type: ${session.weaponType}\n` +
         `Name: ${session.weaponName}\n` +
         `Skin: ${skinName}\n` +
         `Available conditions:\n`,
-      {
-        reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
-      }
+      Markup.inlineKeyboard(keyboard).reply_markup
     );
   }
 
@@ -167,7 +176,8 @@ export class SearchHandlers {
     // Create keyboard for categories using utility
     const keyboard = KeyboardUtils.createCategoryKeyboard(categories);
 
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `🔍 Step-by-Step Item Search\n\n` +
         `Step 5: Choose category\n\n` +
         `Type: ${session.weaponType}\n` +
@@ -175,9 +185,7 @@ export class SearchHandlers {
         `Skin: ${session.skinName}\n` +
         `Condition: ${condition}\n` +
         `Available categories:\n`,
-      {
-        reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
-      }
+      Markup.inlineKeyboard(keyboard).reply_markup
     );
   }
 
@@ -234,12 +242,14 @@ export class SearchHandlers {
 
       message += `💡 Try searching manually or use /search again.`;
 
-      await ctx.editMessageText(message, {
-        reply_markup: Markup.inlineKeyboard([
+      await safeEditMessage(
+        ctx,
+        message,
+        Markup.inlineKeyboard([
           [Markup.button.callback("🔄 Start Over", "search_restart")],
           [Markup.button.callback("❌ Cancel", "search_cancel")],
-        ]).reply_markup,
-      });
+        ]).reply_markup
+      );
       return;
     }
 
@@ -252,17 +262,16 @@ export class SearchHandlers {
     });
 
     // Item found, show price check
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `✅ Item found!\n\n` +
         `Generated name: ${finalName}\n\n` +
         `Click below to check the price:`,
-      {
-        reply_markup: Markup.inlineKeyboard([
-          [Markup.button.callback("💰 Check Price", "check_price_from_search")],
-          [Markup.button.callback("🔄 Search Another", "search_restart")],
-          [Markup.button.callback("❌ Cancel", "search_cancel")],
-        ]).reply_markup,
-      }
+      Markup.inlineKeyboard([
+        [Markup.button.callback("💰 Check Price", "check_price_from_search")],
+        [Markup.button.callback("🔄 Search Another", "search_restart")],
+        [Markup.button.callback("❌ Cancel", "search_cancel")],
+      ]).reply_markup
     );
   }
 
@@ -294,7 +303,8 @@ export class SearchHandlers {
       ...SKIN_CONDITIONS,
     ]);
 
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `🔍 Step-by-Step Item Search\n\n` +
         `Step 4: Choose skin condition\n\n` +
         `Type: ${weaponType}\n` +
@@ -302,15 +312,25 @@ export class SearchHandlers {
         `Skin: None (base weapon)\n` +
         `Available conditions:\n` +
         SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
-      {
-        reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
-      }
+      Markup.inlineKeyboard(keyboard).reply_markup
     );
   }
 
   static async handleSearchRestart(ctx: Context) {
     const user = ctx.from;
     if (!user) return;
+
+    // Check if we're already on the first step
+    const currentMessage = (ctx.callbackQuery as any)?.message?.text;
+    const isAlreadyOnFirstStep = currentMessage?.includes(
+      "Step 1: Choose weapon type"
+    );
+
+    if (isAlreadyOnFirstStep) {
+      // If we're already on the first step, just answer the callback query
+      await ctx.answerCbQuery("🔄 Already on the first step!");
+      return;
+    }
 
     // Clear session and start over
     SearchService.clearSearchSession(user.id.toString());
@@ -334,11 +354,10 @@ export class SearchHandlers {
     // Create inline keyboard for weapon types using utility
     const keyboard = KeyboardUtils.createWeaponTypeKeyboard(weaponTypes);
 
-    await ctx.editMessageText(
+    await safeEditMessage(
+      ctx,
       `🔍 Step-by-Step Item Search\n\n` + `Step 1: Choose weapon type\n\n`,
-      {
-        reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
-      }
+      Markup.inlineKeyboard(keyboard).reply_markup
     );
   }
 
@@ -349,8 +368,10 @@ export class SearchHandlers {
     // Clear search session
     SearchService.clearSearchSession(user.id.toString());
 
-    await ctx.editMessageText(
-      "❌ Search cancelled.\n\nUse /search to start a new search or send an item name directly to check its price."
+    await safeEditMessage(
+      ctx,
+      "❌ Search cancelled.\n\nUse /search to start a new search or send an item name directly to check its price.",
+      undefined
     );
   }
 }
