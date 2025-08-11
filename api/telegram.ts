@@ -912,14 +912,14 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
   SearchService.updateSearchSession(user.id.toString(), {
     step: "complete",
     category,
-    finalName: itemDetails.name,
+    finalName: finalName, // Use the generated name with proper formatting
     itemId: itemDetails.id,
   });
 
   // Item found, show price check
   await ctx.editMessageText(
     `✅ Item found!\n\n` +
-      `Generated name: ${itemDetails.name}\n\n` +
+      `Generated name: ${finalName}\n\n` +
       `Click below to check the price:`,
     {
       reply_markup: Markup.inlineKeyboard([
