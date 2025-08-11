@@ -26,6 +26,7 @@ export interface SearchSession {
   condition?: SkinCondition;
   category?: string;
   finalName?: string;
+  itemId?: string;
   timestamp: number;
 }
 
@@ -261,20 +262,20 @@ export class SearchService {
   }
 
   /**
-   * Validate if generated item name exists in database
+   * Get item details including ID from database
    */
-  static async validateItemName(
+  static async getItemDetails(
     weaponType: string,
     weaponName: string,
     skinName: string | null,
     condition: SkinCondition,
     category: string
-  ): Promise<boolean> {
+  ): Promise<{ id: string; name: string } | null> {
     try {
       // Search by weapon_name and skin_name instead of full name
       let query = adminSupabase
         .from("items")
-        .select("name")
+        .select("id, name")
         .eq("weapon_name", weaponName);
 
       // Handle vanilla knives (no skin)
@@ -291,11 +292,35 @@ export class SearchService {
 
       const { data, error } = await query.single();
 
-      if (error) {
-        return false;
+      if (error || !data) {
+        return null;
       }
 
-      return !!data;
+      return { id: data.id, name: data.name };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  /**
+   * Validate if generated item name exists in database
+   */
+  static async validateItemName(
+    weaponType: string,
+    weaponName: string,
+    skinName: string | null,
+    condition: SkinCondition,
+    category: string
+  ): Promise<boolean> {
+    try {
+      const itemDetails = await this.getItemDetails(
+        weaponType,
+        weaponName,
+        skinName,
+        condition,
+        category
+      );
+      return !!itemDetails;
     } catch (error) {
       return false;
     }

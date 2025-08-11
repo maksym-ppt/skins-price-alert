@@ -130,6 +130,7 @@ export interface SteamPriceOptions {
   appId?: Apps;
   currency?: Currency;
   country?: string; // Country code for regional pricing
+  itemId?: string; // Optional item ID from database
 }
 
 // Helper function to parse price string (e.g., "0,03€" -> 0.03)
@@ -200,7 +201,12 @@ export async function getSteamPrice(
   itemName: string,
   options: SteamPriceOptions = {}
 ): Promise<SteamPriceResult> {
-  const { appId = Apps.CS2, currency = Currency.USD, country = "US" } = options;
+  const {
+    appId = Apps.CS2,
+    currency = Currency.USD,
+    country = "US",
+    itemId,
+  } = options;
 
   // Check cache first
   const cachedPrice = await PriceService.getCachedPrice(itemName);
@@ -305,7 +311,8 @@ export async function getSteamPrice(
       result.currency || currency.toString(),
       result.success,
       result.volume,
-      result.medianPrice
+      result.medianPrice,
+      itemId
     );
 
     return result;
@@ -319,7 +326,15 @@ export async function getSteamPrice(
     };
 
     // Cache the error result too
-    await PriceService.cachePrice(itemName, 0, currency.toString(), false);
+    await PriceService.cachePrice(
+      itemName,
+      0,
+      currency.toString(),
+      false,
+      undefined,
+      undefined,
+      itemId
+    );
 
     return result;
   }

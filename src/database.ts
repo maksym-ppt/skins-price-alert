@@ -549,18 +549,23 @@ export class AlertService {
       | "percentage_drop"
       | "percentage_increase" = "absolute",
     percentageThreshold?: number,
-    basePrice?: number
+    basePrice?: number,
+    itemId?: string
   ): Promise<PriceAlert | null> {
     try {
-      // Try to find the item in our database
-      const item = await ItemService.getItemByName(itemName);
+      // Use provided itemId or try to find the item in our database
+      let resolvedItemId = itemId;
+      if (!resolvedItemId) {
+        const item = await ItemService.getItemByName(itemName);
+        resolvedItemId = item?.id || undefined;
+      }
 
       const { data: alert, error } = await adminSupabase
         .from("price_alerts")
         .insert({
           user_id: userId,
           item_name: itemName,
-          item_id: item?.id || null,
+          item_id: resolvedItemId,
           target_price: targetPrice,
           alert_type: alertType,
           percentage_threshold: percentageThreshold,
@@ -671,18 +676,23 @@ export class PriceService {
     currency: string,
     success: boolean,
     volume?: number,
-    medianPrice?: number
+    medianPrice?: number,
+    itemId?: string
   ): Promise<void> {
     try {
       const now = new Date();
       const expiresAt = new Date(now.getTime() + 15 * 60 * 1000); // 15 minutes
 
-      // Try to find the item in our database
-      const item = await ItemService.getItemByName(itemName);
+      // Use provided itemId or try to find the item in our database
+      let resolvedItemId = itemId;
+      if (!resolvedItemId) {
+        const item = await ItemService.getItemByName(itemName);
+        resolvedItemId = item?.id || undefined;
+      }
 
       await supabase.from("price_cache").upsert({
         item_name: itemName,
-        item_id: item?.id || null,
+        item_id: resolvedItemId,
         price,
         currency,
         volume,
@@ -695,7 +705,7 @@ export class PriceService {
       // Also store in historical data
       await supabase.from("price_history").insert({
         item_name: itemName,
-        item_id: item?.id || null,
+        item_id: resolvedItemId,
         price,
         currency,
         volume,

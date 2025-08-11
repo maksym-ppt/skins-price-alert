@@ -47,6 +47,7 @@ bot.start(async (ctx) => {
         `📋 Available commands:\n` +
         `• Send any item name to check its price\n` +
         `• /search - Step-by-step item search\n` +
+        `• /restart - Restart current search session\n` +
         `• /games - List supported games\n` +
         `• /currency - Set your preferred currency\n` +
         `• /alerts - Manage your price alerts\n` +
@@ -75,6 +76,7 @@ bot.help(async (ctx) => {
       `📋 Commands:\n` +
       `• /start - Welcome message and registration\n` +
       `• /search - Step-by-step item search\n` +
+      `• /restart - Restart current search session\n` +
       `• /games - List supported games\n` +
       `• /currency - Set your preferred currency\n` +
       `• /alerts - Manage your price alerts\n` +
@@ -230,18 +232,33 @@ bot.command("alerts", async (ctx) => {
   }
 });
 
-// Inline button actions for creating alerts quickly (get item from replied message)
+// Inline button actions for creating alerts quickly (get item from replied message or search session)
 bot.action("ALERT_DROP", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
-    // Try to infer item from the original user message this price message replied to
-    const itemName: string | undefined = cbMessage?.reply_to_message?.text;
-    // Fallback: try to extract quoted name from message text if present
-    const selfText: string | undefined = cbMessage?.text;
-    const quotedMatch =
-      typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
-    const resolvedItem = itemName || (quotedMatch ? quotedMatch[1] : undefined);
+    const user = ctx.from;
+    if (!user) return;
+
+    let itemName: string | undefined;
+
+    // First try to get item from search session
+    const session = SearchService.getSearchSession(user.id.toString());
+    if (session?.finalName) {
+      itemName = session.finalName;
+    } else {
+      // Fallback: try to get from replied message
+      const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
+      itemName = cbMessage?.reply_to_message?.text;
+
+      // Fallback: try to extract quoted name from message text if present
+      if (!itemName) {
+        const selfText: string | undefined = cbMessage?.text;
+        const quotedMatch =
+          typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
+        itemName = quotedMatch ? quotedMatch[1] : undefined;
+      }
+    }
+
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -250,7 +267,7 @@ bot.action("ALERT_DROP", async (ctx) => {
     }
 
     await ctx.reply(
-      `🔔 Drop alert: Reply with percentage (e.g. 10) for ${resolvedItem}`,
+      `🔔 Drop alert: Reply with percentage (e.g. 10) for ${itemName}`,
       { reply_markup: Markup.forceReply().reply_markup }
     );
   } catch (err) {
@@ -261,12 +278,29 @@ bot.action("ALERT_DROP", async (ctx) => {
 bot.action("ALERT_INCREASE", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
-    const itemName: string | undefined = cbMessage?.reply_to_message?.text;
-    const selfText: string | undefined = cbMessage?.text;
-    const quotedMatch =
-      typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
-    const resolvedItem = itemName || (quotedMatch ? quotedMatch[1] : undefined);
+    const user = ctx.from;
+    if (!user) return;
+
+    let itemName: string | undefined;
+
+    // First try to get item from search session
+    const session = SearchService.getSearchSession(user.id.toString());
+    if (session?.finalName) {
+      itemName = session.finalName;
+    } else {
+      // Fallback: try to get from replied message
+      const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
+      itemName = cbMessage?.reply_to_message?.text;
+
+      // Fallback: try to extract quoted name from message text if present
+      if (!itemName) {
+        const selfText: string | undefined = cbMessage?.text;
+        const quotedMatch =
+          typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
+        itemName = quotedMatch ? quotedMatch[1] : undefined;
+      }
+    }
+
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -275,7 +309,7 @@ bot.action("ALERT_INCREASE", async (ctx) => {
     }
 
     await ctx.reply(
-      `🔔 Increase alert: Reply with percentage (e.g. 10) for ${resolvedItem}`,
+      `🔔 Increase alert: Reply with percentage (e.g. 10) for ${itemName}`,
       { reply_markup: Markup.forceReply().reply_markup }
     );
   } catch (err) {
@@ -286,12 +320,29 @@ bot.action("ALERT_INCREASE", async (ctx) => {
 bot.action("ALERT_TARGET", async (ctx) => {
   try {
     await ctx.answerCbQuery();
-    const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
-    const itemName: string | undefined = cbMessage?.reply_to_message?.text;
-    const selfText: string | undefined = cbMessage?.text;
-    const quotedMatch =
-      typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
-    const resolvedItem = itemName || (quotedMatch ? quotedMatch[1] : undefined);
+    const user = ctx.from;
+    if (!user) return;
+
+    let itemName: string | undefined;
+
+    // First try to get item from search session
+    const session = SearchService.getSearchSession(user.id.toString());
+    if (session?.finalName) {
+      itemName = session.finalName;
+    } else {
+      // Fallback: try to get from replied message
+      const cbMessage: any = (ctx.callbackQuery as any)?.message as any;
+      itemName = cbMessage?.reply_to_message?.text;
+
+      // Fallback: try to extract quoted name from message text if present
+      if (!itemName) {
+        const selfText: string | undefined = cbMessage?.text;
+        const quotedMatch =
+          typeof selfText === "string" ? selfText.match(/\"([^\"]+)\"/) : null;
+        itemName = quotedMatch ? quotedMatch[1] : undefined;
+      }
+    }
+
     if (!itemName) {
       await ctx.reply(
         "❗ Please send an item name first, then use the buttons under the result."
@@ -299,15 +350,14 @@ bot.action("ALERT_TARGET", async (ctx) => {
       return;
     }
 
-    const from = ctx.from;
     let currencyCode = "USD";
     try {
-      const dbUser = from ? await UserService.getUser(from.id) : null;
+      const dbUser = await UserService.getUser(user.id);
       currencyCode = dbUser?.preferences?.currency || "USD";
     } catch (_) {}
 
     await ctx.reply(
-      `🎯 Target alert: Reply with target price (e.g. 50) in ${currencyCode} for ${resolvedItem}`,
+      `🎯 Target alert: Reply with target price (e.g. 50) in ${currencyCode} for ${itemName}`,
       { reply_markup: Markup.forceReply().reply_markup }
     );
   } catch (err) {
@@ -315,8 +365,8 @@ bot.action("ALERT_TARGET", async (ctx) => {
   }
 });
 
-// Search command - Step-by-step item search
-bot.command("search", async (ctx) => {
+// Restart command - Restart current search session
+bot.command("restart", async (ctx) => {
   const user = ctx.from;
   if (!user) return;
 
@@ -376,25 +426,78 @@ bot.command("search", async (ctx) => {
   keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
 
   await ctx.reply(
-    `🔍 Step-by-Step Item Search\n\n` + `Step 1: Choose item type\n\n`,
-    // `Available types:\n` +
-    // weaponTypes
-    //   .map((type, index) => {
-    //     const isEven = index % 2 === 0;
-    //     const isLast = index === weaponTypes.length - 1;
-    //     const nextType = weaponTypes[index + 1];
+    `🔄 Search Session Restarted!\n\n` + `Step 1: Choose item type\n\n`,
+    {
+      reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
+    }
+  );
+});
 
-    //     if (isEven && nextType) {
-    //       return `• ${type.padEnd(15)} • ${nextType}`;
-    //     } else if (isEven && isLast) {
-    //       return `• ${type}`;
-    //     } else if (!isEven) {
-    //       return ""; // Skip odd indices as they're handled above
-    //     }
-    //     return `• ${type}`;
-    //   })
-    //   .filter((line) => line !== "")
-    //   .join("\n"),
+// Search command - Step-by-step item search
+bot.command("search", async (ctx) => {
+  const user = ctx.from;
+  if (!user) return;
+
+  // Clear any existing search session
+  SearchService.clearSearchSession(user.id.toString());
+
+  // Get weapon types
+  const weaponTypes = await SearchService.getWeaponTypes();
+
+  if (weaponTypes.length === 0) {
+    await ctx.reply(
+      "❌ No weapon types found. Please import items first using /import-csv"
+    );
+    return;
+  }
+
+  // Create search session
+  SearchService.createSearchSession(user.id.toString());
+
+  // Create inline keyboard for weapon types
+  const keyboard = [];
+
+  // Group weapon types into rows of 3 buttons each
+  for (let i = 0; i < weaponTypes.length; i += 3) {
+    const row = [];
+    row.push(
+      Markup.button.callback(
+        weaponTypes[i],
+        `search_type_${encodeURIComponent(weaponTypes[i])}`
+      )
+    );
+
+    // Add second button to the row if available
+    if (i + 1 < weaponTypes.length) {
+      row.push(
+        Markup.button.callback(
+          weaponTypes[i + 1],
+          `search_type_${encodeURIComponent(weaponTypes[i + 1])}`
+        )
+      );
+    }
+
+    // Add third button to the row if available
+    if (i + 2 < weaponTypes.length) {
+      row.push(
+        Markup.button.callback(
+          weaponTypes[i + 2],
+          `search_type_${encodeURIComponent(weaponTypes[i + 2])}`
+        )
+      );
+    }
+
+    keyboard.push(row);
+  }
+
+  // Add restart and cancel buttons in the last row
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
+
+  await ctx.reply(
+    `🔍 Step-by-Step Item Search\n\n` + `Step 1: Choose item type\n\n`,
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -466,20 +569,15 @@ bot.action(/^search_type_(.+)$/, async (ctx) => {
     keyboard.push(row);
   }
 
-  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 2: Choose item name\n\n` +
       `Type: ${weaponType}\n`,
-    // `Available weapons:\n` +
-    // weaponNames
-    //   .slice(0, 20)
-    //   .map((name) => `• ${name}`)
-    //   .join("\n") +
-    // (weaponNames.length > 20
-    //   ? `\n... and ${weaponNames.length - 20} more`
-    //   : ""),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -570,19 +668,16 @@ bot.action(/^search_weapon_(.+)$/, async (ctx) => {
     keyboard.push(row);
   }
 
-  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
       `Step 3: Choose skin name\n\n` +
       `Type: ${session.weaponType}\n` +
       `Name: ${weaponName}\n`,
-    // `Available skins:\n` +
-    // skinNames
-    //   .slice(0, 20)
-    //   .map((skin) => `• ${skin}`)
-    //   .join("\n") +
-    // (skinNames.length > 20 ? `\n... and ${skinNames.length - 20} more` : ""),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -646,7 +741,10 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
     keyboard.push(row);
   }
 
-  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
@@ -655,7 +753,6 @@ bot.action(/^search_skin_(.+)$/, async (ctx) => {
       `Name: ${session.weaponName}\n` +
       `Skin: ${skinName}\n` +
       `Available conditions:\n`,
-    // SKIN_CONDITIONS.map((condition) => `• ${condition}`).join("\n"),
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -728,7 +825,10 @@ bot.action(/^search_condition_(.+)$/, async (ctx) => {
     keyboard.push(row);
   }
 
-  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
@@ -771,15 +871,8 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
     category
   );
 
-  // Update session
-  SearchService.updateSearchSession(user.id.toString(), {
-    step: "complete",
-    category,
-    finalName,
-  });
-
-  // Check if item exists in database
-  const exists = await SearchService.validateItemName(
+  // Check if item exists in database and get item details
+  const itemDetails = await SearchService.getItemDetails(
     session.weaponType!,
     session.weaponName!,
     session.skinName || null,
@@ -787,7 +880,7 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
     category
   );
 
-  if (!exists) {
+  if (!itemDetails) {
     // Get similar items for suggestions
     const similarItems = await SearchService.getSimilarItems(
       session.weaponName!,
@@ -815,10 +908,18 @@ bot.action(/^search_category_(.+)$/, async (ctx) => {
     return;
   }
 
+  // Update session with item details
+  SearchService.updateSearchSession(user.id.toString(), {
+    step: "complete",
+    category,
+    finalName: itemDetails.name,
+    itemId: itemDetails.id,
+  });
+
   // Item found, show price check
   await ctx.editMessageText(
     `✅ Item found!\n\n` +
-      `Generated name: ${finalName}\n\n` +
+      `Generated name: ${itemDetails.name}\n\n` +
       `Click below to check the price:`,
     {
       reply_markup: Markup.inlineKeyboard([
@@ -886,7 +987,10 @@ async function handleNoSkins(ctx: any, weaponType: string, weaponName: string) {
     keyboard.push(row);
   }
 
-  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
 
   await ctx.editMessageText(
     `🔍 Step-by-Step Item Search\n\n` +
@@ -933,6 +1037,7 @@ bot.action("check_price_from_search", async (ctx) => {
   const priceResult = await getSteamPrice(itemName, {
     appId: Apps.CS2,
     currency: Currency.USD,
+    itemId: session.itemId,
   });
 
   const cacheIndicator = priceResult.cached ? " (cached)" : "";
@@ -941,6 +1046,7 @@ bot.action("check_price_from_search", async (ctx) => {
   await ctx.editMessageText(
     join([
       `💰 Price Check Result${cacheIndicator}${rateLimitInfo}\n\n`,
+      `📦 Item: "${itemName}"\n\n`,
       `${priceResult.message}\n`,
       ...(priceResult.marketUrl
         ? [link("🔗 View on Steam Market", priceResult.marketUrl)]
@@ -1021,35 +1127,14 @@ bot.action("search_restart", async (ctx) => {
     keyboard.push(row);
   }
 
-  // Add cancel button in the last row
-  keyboard.push([Markup.button.callback("❌ Cancel", "search_cancel")]);
+  // Add restart and cancel buttons in the last row
+  keyboard.push([
+    Markup.button.callback("🔄 Restart", "search_restart"),
+    Markup.button.callback("❌ Cancel", "search_cancel"),
+  ]);
 
   await ctx.editMessageText(
-    `🔍 Step-by-Step Item Search\n\n` +
-      `Step 1: Choose weapon type\n\n`,
-      // `Available types:\n` +
-      // weaponTypes
-      //   .map((type, index) => {
-      //     const isEven = index % 3 === 0;
-      //     const isLast = index === weaponTypes.length - 1;
-      //     const nextType = weaponTypes[index + 1];
-      //     const nextType2 = weaponTypes[index + 2];
-
-      //     if (isEven && nextType && nextType2) {
-      //       return `• ${type.padEnd(15)} • ${nextType.padEnd(
-      //         15
-      //       )} • ${nextType2}`;
-      //     } else if (isEven && nextType) {
-      //       return `• ${type.padEnd(15)} • ${nextType}`;
-      //     } else if (isEven && isLast) {
-      //       return `• ${type}`;
-      //     } else if (!isEven) {
-      //       return ""; // Skip non-first indices as they're handled above
-      //     }
-      //     return `• ${type}`;
-      //   })
-      //   .filter((line) => line !== "")
-      //   .join("\n"),
+    `🔍 Step-by-Step Item Search\n\n` + `Step 1: Choose weapon type\n\n`,
     {
       reply_markup: Markup.inlineKeyboard(keyboard).reply_markup,
     }
@@ -1204,13 +1289,18 @@ bot.on(message("text"), async (ctx) => {
         return;
       }
 
+      // Get item_id from search session if available
+      const session = SearchService.getSearchSession(user.id.toString());
+      const itemId = session?.itemId;
+
       const alert = await AlertService.createAlert(
         dbUser.id,
         itemName,
         alertConfig.targetPrice,
         alertConfig.alertType,
         alertConfig.percentageThreshold,
-        alertConfig.basePrice
+        alertConfig.basePrice,
+        itemId
       );
 
       if (alert) {
@@ -1291,13 +1381,18 @@ bot.on(message("text"), async (ctx) => {
       return;
     }
 
+    // Get item_id from search session if available
+    const session = SearchService.getSearchSession(user.id.toString());
+    const itemId = session?.itemId;
+
     const alert = await AlertService.createAlert(
       dbUser.id,
       originalMessage,
       alertConfig.targetPrice,
       alertConfig.alertType,
       alertConfig.percentageThreshold,
-      alertConfig.basePrice
+      alertConfig.basePrice,
+      itemId
     );
 
     if (alert) {
